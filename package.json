@@ -22,7 +22,7 @@
     "src/index.js",
     "src/ubiiNode/"
   ],
-  "main": "index.js",
+  "browser": "src/index.js",
   "dependencies": {
     "@tum-far/ubii-msg-formats": "0.15.2"
   },

@@ -1,4 +1,4 @@
-import UbiiClientService from './ubiiNode/ubiiClientService';
+const UbiiClientService = require('./ubiiNode/ubiiClientService').default;
 
 module.exports = {
     UbiiClientService: UbiiClientService
