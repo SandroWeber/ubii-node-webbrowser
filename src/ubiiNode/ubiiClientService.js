@@ -8,14 +8,14 @@ const uuidv4Regex =
   '[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}';
 
 class UbiiClientService extends EventEmitter {
-  EVENTS = {
-    CONNECT: 'CONNECT',
-    DISCONNECT: 'DISCONNECT',
-    RECONNECT: 'RECONNECT'
-  };
-
   constructor() {
     super();
+
+    this.EVENTS = Object.freeze({
+      CONNECT: 'CONNECT',
+      DISCONNECT: 'DISCONNECT',
+      RECONNECT: 'RECONNECT'
+    });
 
     this.client = undefined;
     this.connecting = false;
@@ -196,11 +196,5 @@ class UbiiClientService extends EventEmitter {
     return uuidv4Regex;
   }
 }
-
-/*UbiiClientService.EVENTS = {
-  CONNECT: 'CONNECT',
-  DISCONNECT: 'DISCONNECT',
-  RECONNECT: 'RECONNECT'
-};*/
 
 export default new UbiiClientService();
