@@ -1,5 +1,14 @@
 <template>
   <div id="app">
+    <div class="server-connection">
+      <label>IP</label>
+      <input class="input" v-model="serverIP" />
+      <label>Service Port</label>
+      <input class="input" v-model="servicePort" />
+      <button class="input btn-connect" @click="connectUbii()">
+        ⟲
+      </button>
+    </div>
     <!--<div class="page-header-wrapper">
       <server-status id="server-status" />
       <page-header />
@@ -18,20 +27,30 @@ export default {
   components: {
     ExampleMousePointer
   },
-  mounted: () => {
-    UbiiClientService.connect();
+  data: function() {
+    return {
+      serverIP: window.location.hostname,
+      servicePort: 8102
+    };
+  },
+  mounted: function() {
     window.addEventListener('beforeunload', () => {
       UbiiClientService.disconnect();
     });
+    this.connectUbii();
   },
   beforeDestroy: function() {
     UbiiClientService.disconnect();
+  },
+  methods: {
+    connectUbii: function() {
+      UbiiClientService.connect(this.serverIP, this.servicePort);
+    }
   }
 };
 </script>
 
 <style>
-
 * {
   margin: 0;
   padding: 0;
@@ -41,7 +60,8 @@ export default {
   background-color: black;
 }
 
-html, body {
+html,
+body {
   width: 100%;
   height: 100%;
 }
@@ -58,32 +78,16 @@ html, body {
   overflow: hidden;
 }
 
-#server-status {
-  position: relative;
+.server-connection {
+  color: white;
 }
 
-.navigation-wrapper {
-  flex-grow: 0;
+.input {
+  background-color: white;
+  margin: 5px;
 }
 
-.page-header-wrapper {
-  flex-grow: 0;
-}
-
-.router-view-wrapper {
-  flex-grow: 1;
-  overflow: hidden;
-}
-
-.server-stats {
-  text-align: center;
-}
-
-.router-view {
-  height: 100%;
-}
-
-.svg-inline--fa {
-  vertical-align: 0;
+.btn-connect {
+  width: 25px;
 }
 </style>

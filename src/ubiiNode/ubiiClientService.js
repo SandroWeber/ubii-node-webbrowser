@@ -17,28 +17,29 @@ class UbiiClientService extends EventEmitter {
   constructor() {
     super();
 
-    this.serverIP = window.location.hostname;
-    this.serverPort = '8102';
-
     this.client = undefined;
     this.connecting = false;
 
     this.onDisconnectCallbacks = [];
   }
 
-  async connect() {
-    if (this.isConnected() || this.connecting) {
+  async connect(serverIP = window.location.hostname, servicePort = 8102) {
+    let changedAddress = (serverIP !== this.serverIP) || (servicePort !== this.servicePort);
+    if (!changedAddress && (this.isConnected() || this.connecting)) {
       return this.waitForConnection();
     }
 
-    console.info('UbiiClientService - connecting ...');
+    this.serverIP = serverIP;
+    this.servicePort = servicePort;
     this.connecting = true;
+
+    console.info('UbiiClientService - connecting to ' + this.serverIP + ':' + this.servicePort + '...');
 
     if (!this.client) {
       this.client = new ClientNodeWeb(
         'web frontend',
         this.serverIP,
-        this.serverPort
+        this.servicePort
       );
     }
 

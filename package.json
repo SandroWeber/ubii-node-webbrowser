@@ -1,15 +1,30 @@
 {
   "name": "ubii-node-webbrowser",
   "version": "0.1.0",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SandroWeber/ubii-node-webbrowser"
+  },
+  "private": false,
+  "contributors": [
+    {
+      "name": "Sandro Weber",
+      "email": "webers@in.tum.de",
+      "url": "https://wiki.tum.de/pages/viewpage.action?pageId=51840433"
+    }
+  ],
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
+  "files": [
+    "src/index.js",
+    "src/ubiiNode/"
+  ],
+  "main": "index.js",
   "dependencies": {
-    "@tum-far/ubii-msg-formats": "0.15.2",
-    "uuid": "3.3.2"
+    "@tum-far/ubii-msg-formats": "0.15.2"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.12.1",
