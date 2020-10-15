@@ -195,6 +195,16 @@ class UbiiClientService extends EventEmitter {
   getUUIDv4Regex() {
     return uuidv4Regex;
   }
+
+  generateTimestamp() {
+    let now = Date.now();
+    let seconds = Math.floor(now / 1000);
+    let nanos = (now - seconds * 1000) * 1000000;
+    return {
+      seconds: seconds,
+      nanos: nanos
+    }
+  }
 }
 
 export default new UbiiClientService();
