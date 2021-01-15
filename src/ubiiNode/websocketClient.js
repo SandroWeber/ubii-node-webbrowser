@@ -1,5 +1,8 @@
 /* eslint-disable no-console */
 
+const MSG_PING = 'PING';
+const MSG_PONG = 'PONG';
+
 class WebsocketClient {
   /**
    * Communication endpoint implementing websocket.
@@ -15,6 +18,8 @@ class WebsocketClient {
     this.host = host;
     this.port = port;
     this.useHTTPS = process.env.NODE_ENV === 'production' ? true : false;
+
+    this.textDecoder = new TextDecoder("utf-8");
 
     if (autoconnect) {
       try {
@@ -41,20 +46,20 @@ class WebsocketClient {
     this.websocket.binaryType = 'arraybuffer';
 
     // add callbacks
-    this.websocket.onmessage = message => {
+    this.websocket.onmessage = (message) => {
       // process pings
-      /*if (payload.toString() === PING_MESSAGE) {
-       this.send(PONG_MESSAGE);
-       return;
-       }*/
+      if (/*this.textDecoder.decode(message.data)*/message.data === MSG_PING) {
+        //this.send(MSG_PONG);
+        return;
+      }
 
       if (!this.processMessage) {
         console.warn(
           '[' +
-            new Date() +
-            '] WebsocketClient.onMessageReceived() has not been set!' +
-            '\nMessage received:\n' +
-            message
+          new Date() +
+          '] WebsocketClient.onMessageReceived() has not been set!' +
+          '\nMessage received:\n' +
+          message
         );
       } else {
         this.processMessage(message);

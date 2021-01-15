@@ -37,7 +37,7 @@ class UbiiClientService extends EventEmitter {
 
     if (!this.client) {
       this.client = new ClientNodeWeb(
-        'web frontend',
+        'ubii-node-webbrowser test vue client',
         this.serverIP,
         this.servicePort
       );
