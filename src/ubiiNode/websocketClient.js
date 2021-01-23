@@ -48,8 +48,8 @@ class WebsocketClient {
     // add callbacks
     this.websocket.onmessage = (message) => {
       // process pings
-      if (/*this.textDecoder.decode(message.data)*/message.data === MSG_PING) {
-        //this.send(MSG_PONG);
+      if (message.data === MSG_PING) {
+        this.send(MSG_PONG);
         return;
       }
 
