@@ -44,6 +44,7 @@ export default {
   },
   methods: {
     connectUbii: function() {
+      UbiiClientService.setName('ubii-node-webbrowser VueJS Test');
       UbiiClientService.connect(this.serverIP, this.servicePort);
     }
   }

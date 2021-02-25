@@ -17,10 +17,16 @@ class UbiiClientService extends EventEmitter {
       RECONNECT: 'RECONNECT'
     });
 
+    this.name = 'ubii-node-webbrowser';
+
     this.client = undefined;
     this.connecting = false;
 
     this.onDisconnectCallbacks = [];
+  }
+
+  setName(name) {
+    this.name = name;
   }
 
   async connect(serverIP = window.location.hostname, servicePort = 8102) {
@@ -37,7 +43,7 @@ class UbiiClientService extends EventEmitter {
 
     if (!this.client) {
       this.client = new ClientNodeWeb(
-        'ubii-node-webbrowser test vue client',
+        this.name,
         this.serverIP,
         this.servicePort
       );

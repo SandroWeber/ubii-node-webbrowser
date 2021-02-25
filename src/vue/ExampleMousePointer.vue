@@ -205,22 +205,24 @@ export default {
       this.ubiiComponentServerPointer = this.ubiiDevice.components[2];
 
       // specification of a ubii.processing.ProcessingModule
-      let processingCallback = (deltaTime, input, output) => {
-        if (!input.clientPointer) {
+      let processingCallback = (deltaTime, inputs, outputs) => {
+        if (!inputs.clientPointer) {
           return;
         }
 
-        if (input.mirrorPointer === true) {
-          output.serverPointer = {
-            x: 1 - input.clientPointer.x,
-            y: 1 - input.clientPointer.y
+        if (inputs.mirrorPointer === true) {
+          outputs.serverPointer = {
+            x: 1 - inputs.clientPointer.x,
+            y: 1 - inputs.clientPointer.y
           };
         } else {
-          output.serverPointer = {
-            x: input.clientPointer.x,
-            y: input.clientPointer.y
+          outputs.serverPointer = {
+            x: inputs.clientPointer.x,
+            y: inputs.clientPointer.y
           };
         }
+
+        return outputs;
       };
 
       this.ubiiProcessingModule = {
@@ -228,7 +230,7 @@ export default {
         onProcessingStringified: processingCallback.toString(),
         processingMode: {
           frequency: {
-            hertz: 60
+            hertz: 30
           }
         },
         inputs: [
@@ -264,19 +266,22 @@ export default {
               {
                 inputName: this.ubiiProcessingModule.inputClientPointer
                   .internalName,
-                topicSource: this.ubiiComponentClientPointer.topic
+                //topicSource: 'topic',
+                topic: this.ubiiComponentClientPointer.topic
               },
               {
                 inputName: this.ubiiProcessingModule.inputMirrorPointer
                   .internalName,
-                topicSource: this.ubiiComponentMirrorPointer.topic
+                //topicSource: 'topic',
+                topic: this.ubiiComponentMirrorPointer.topic
               }
             ],
             outputMappings: [
               {
                 outputName: this.ubiiProcessingModule.outputServerPointer
                   .internalName,
-                topicDestination: this.ubiiComponentServerPointer.topic
+                //topicDestination: 'topic',
+                topic: this.ubiiComponentServerPointer.topic
               }
             ]
           }
