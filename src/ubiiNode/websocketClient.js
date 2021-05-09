@@ -1,5 +1,8 @@
 /* eslint-disable no-console */
 
+import Bowser from 'bowser';
+const browser = Bowser.getParser(window.navigator.userAgent);
+
 const MSG_PING = 'PING';
 const MSG_PONG = 'PONG';
 
@@ -36,7 +39,8 @@ class WebsocketClient {
   start() {
     // init
     try {
-      let url = this.useHTTPS ? 'wss://' : 'ws://';
+      // safari demands "ws://" protocol indicator
+      let url = (this.useHTTPS && browser.getBrowserName() !== 'Safari') ? 'wss://' : 'ws://';
       url += `${this.host}:${this.port}?clientID=${this.identity}`;
       this.websocket = new WebSocket(url);
     } catch (error) {

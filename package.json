@@ -24,7 +24,8 @@
   ],
   "browser": "src/index.js",
   "dependencies": {
-    "@tum-far/ubii-msg-formats": "0.15.8"
+    "@tum-far/ubii-msg-formats": "0.15.12",
+    "bowser": "2.11.0"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^3.12.1",
