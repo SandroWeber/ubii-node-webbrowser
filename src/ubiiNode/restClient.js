@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import UbiiClientService from './ubiiClientService';
 
 class RESTClient {
   /**
@@ -9,11 +10,10 @@ class RESTClient {
   constructor(host = 'localhost', port = 5555) {
     this.host = host;
     this.port = port;
-    this.useHTTPS = process.env.NODE_ENV === 'production' ? true : false;
   }
 
   send(route, message) {
-    let url = this.useHTTPS ? 'https://' : 'http://';
+    let url = UbiiClientService.instance.useHTTPS ? 'https://' : 'http://';
     url += this.host + ':' + this.port + route;
 
     return new Promise(async (resolve, reject) => {

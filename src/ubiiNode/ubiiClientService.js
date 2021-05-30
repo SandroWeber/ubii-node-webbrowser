@@ -7,15 +7,16 @@ import ClientNodeWeb from './clientNodeWeb';
 const uuidv4Regex =
   '[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}';
 
+let _instance = null;
+const SINGLETON_ENFORCER = Symbol();
+
 class UbiiClientService extends EventEmitter {
-  constructor() {
+  constructor(enforcer) {
     super();
 
-    this.EVENTS = Object.freeze({
-      CONNECT: 'CONNECT',
-      DISCONNECT: 'DISCONNECT',
-      RECONNECT: 'RECONNECT'
-    });
+    if (enforcer !== SINGLETON_ENFORCER) {
+      throw new Error('Use ' + this.constructor.name + '.instance');
+    }
 
     this.name = 'ubii-node-webbrowser';
 
@@ -23,10 +24,23 @@ class UbiiClientService extends EventEmitter {
     this.connecting = false;
 
     this.onDisconnectCallbacks = [];
+    this.useHTTPS = true;
+  }
+
+  static get instance() {
+    if (_instance == null) {
+      _instance = new UbiiClientService(SINGLETON_ENFORCER);
+    }
+
+    return _instance;
   }
 
   setName(name) {
     this.name = name;
+  }
+
+  setHTTPS(bool) {
+    this.useHTTPS = bool;
   }
 
   async connect(serverIP = window.location.hostname, servicePort = 8102) {
@@ -58,7 +72,7 @@ class UbiiClientService extends EventEmitter {
           );
           this.connecting = false;
 
-          this.emit(this.EVENTS.CONNECT);
+          this.emit(UbiiClientService.EVENTS.CONNECT);
         }
       },
       error => {
@@ -78,7 +92,7 @@ class UbiiClientService extends EventEmitter {
 
     let id = this.client.clientSpecification.id;
 
-    this.emit(this.EVENTS.DISCONNECT);
+    this.emit(UbiiClientService.EVENTS.DISCONNECT);
     this.onDisconnectCallbacks.forEach(callback => {
       callback();
     });
@@ -213,4 +227,10 @@ class UbiiClientService extends EventEmitter {
   }
 }
 
-export default new UbiiClientService();
+UbiiClientService.EVENTS = Object.freeze({
+  CONNECT: 'CONNECT',
+  DISCONNECT: 'DISCONNECT',
+  RECONNECT: 'RECONNECT'
+});
+
+export default UbiiClientService;

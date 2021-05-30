@@ -35,17 +35,18 @@ export default {
   },
   mounted: function() {
     window.addEventListener('beforeunload', () => {
-      UbiiClientService.disconnect();
+      UbiiClientService.instance.disconnect();
     });
     this.connectUbii();
   },
   beforeDestroy: function() {
-    UbiiClientService.disconnect();
+    UbiiClientService.instance.disconnect();
   },
   methods: {
     connectUbii: function() {
-      UbiiClientService.setName('ubii-node-webbrowser VueJS Test');
-      UbiiClientService.connect(this.serverIP, this.servicePort);
+      UbiiClientService.instance.setName('ubii-node-webbrowser VueJS Test');
+      UbiiClientService.instance.setHTTPS(window.location.protocol.includes('https'));
+      UbiiClientService.instance.connect(this.serverIP, this.servicePort);
     }
   }
 };

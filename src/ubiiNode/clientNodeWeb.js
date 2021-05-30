@@ -9,11 +9,12 @@ import {
 } from '@tum-far/ubii-msg-formats';
 
 class ClientNodeWeb {
-  constructor(name, serverHost, servicePort) {
+  constructor(name, serverHost, servicePort, forceHTTPS = false) {
     // Properties:
     this.name = name;
     this.serverHost = serverHost;
     this.servicePort = servicePort;
+    this.forceHTTPS = forceHTTPS;
 
     this.serviceClient = undefined;
     this.topicDataClient = undefined;

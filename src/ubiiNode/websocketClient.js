@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import UbiiClientService from './ubiiClientService';
 
 const MSG_PING = 'PING';
 const MSG_PONG = 'PONG';
@@ -17,7 +18,6 @@ class WebsocketClient {
     this.identity = identity;
     this.host = host;
     this.port = port;
-    this.useHTTPS = process.env.NODE_ENV === 'production' ? true : false;
 
     this.textDecoder = new TextDecoder("utf-8");
 
@@ -36,7 +36,7 @@ class WebsocketClient {
   start() {
     // init
     try {
-      let url = this.useHTTPS ? 'wss://' : 'ws://';
+      let url = UbiiClientService.instance.useHTTPS ? 'wss://' : 'ws://';
       url += `${this.host}:${this.port}?clientID=${this.identity}`;
       this.websocket = new WebSocket(url);
     } catch (error) {

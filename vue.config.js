@@ -1,5 +1,12 @@
-//const path = require('path');
+const fs = require('fs');
 
 module.exports = {
-  chainWebpack: config => {}
+  chainWebpack: config => {},
+  /*devServer: {
+    https: {
+      key: fs.readFileSync('./certificates/ubii.private-key.pem'),
+      cert: fs.readFileSync('./certificates/ubii.cert.pem'),
+    },
+    public: 'https://localhost:8080/'
+  }*/
 };
