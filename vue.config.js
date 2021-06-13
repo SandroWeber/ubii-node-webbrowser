@@ -6,7 +6,6 @@ module.exports = {
     https: {
       key: fs.readFileSync('./certificates/ubii.private-key.pem'),
       cert: fs.readFileSync('./certificates/ubii.cert.pem'),
-    },
-    public: 'https://localhost:8080/'
+    }
   }
 };

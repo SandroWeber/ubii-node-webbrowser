@@ -72,6 +72,11 @@ class UbiiClientService extends EventEmitter {
           );
           this.connecting = false;
 
+          this.client.topicDataClient.websocket.onclose = event => {
+            console.warn('Ubi-Interact topic data websocket connection has closed!');
+            this.emit(UbiiClientService.EVENTS.DISCONNECT);
+          };
+
           this.emit(UbiiClientService.EVENTS.CONNECT);
         }
       },
