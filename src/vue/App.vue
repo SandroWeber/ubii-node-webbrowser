@@ -1,6 +1,7 @@
 <template>
   <div id="app">
     <div class="server-connection">
+      <server-status />
       <label>IP</label>
       <input class="input" v-model="serverIP" />
       <label>Service Port</label>
@@ -20,12 +21,14 @@
 
 <script>
 import UbiiClientService from '../ubiiNode/ubiiClientService';
+import ServerStatus from './ServerStatus.vue';
 import ExampleMousePointer from './ExampleMousePointer.vue';
 
 export default {
   name: 'app',
   components: {
-    ExampleMousePointer
+    ExampleMousePointer,
+    ServerStatus
   },
   data: function() {
     return {
