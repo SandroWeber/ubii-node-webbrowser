@@ -12,11 +12,12 @@ class RESTClient {
     this.port = port;
   }
 
+  //TODO: make async/await !
   send(route, message) {
     let url = UbiiClientService.instance.useHTTPS ? 'https://' : 'http://';
     url += this.host + ':' + this.port + route;
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       let body = JSON.stringify(message);
 
       const request = new Request(url, {
@@ -29,11 +30,12 @@ class RESTClient {
       });
 
       try {
-        const response = await fetch(request);
-        if (!response.ok) {
-          throw new Error('Network response was not ok.');
-        }
-        return resolve(response.json());
+        fetch(request).then((response) => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok.');
+          }
+          return resolve(response.json());
+        });
       } catch (error) {
         console.error(error);
         return reject(error);
