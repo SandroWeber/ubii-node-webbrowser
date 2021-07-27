@@ -266,6 +266,11 @@ class ClientNodeWeb {
    * @param {*} callback
    */
   async subscribeTopic(topic, callback) {
+    if (typeof callback !== 'function') {
+      console.error('UbiiClientNode.subscribeTopic() - callback passed is not a function!');
+      return false;
+    }
+
     let message = {
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
@@ -326,6 +331,11 @@ class ClientNodeWeb {
    * @param {*} callback
    */
   async subscribeRegex(regexString, callback) {
+    if (typeof callback !== 'function') {
+      console.error('UbiiClientNode.subscribeRegex() - callback passed is not a function!');
+      return false;
+    }
+
     // already subscribed to regexString, add callback to list
     let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
     if (registeredRegex) {
