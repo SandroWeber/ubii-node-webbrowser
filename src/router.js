@@ -28,7 +28,12 @@ export default new Router({
     },
     /* examples */
     {
-      path: '/examples/mouse-pointer',
+      path: '/examples',
+      name: 'Examples - Overview',
+      component: () => import('./vue/examples/ExamplesOverview.vue')
+    },
+    {
+      path: '/examples/mouse_pointer',
       name: 'Example - Mouse Pointer',
       component: () => import('./vue/examples/ExampleMousePointer.vue')
     }

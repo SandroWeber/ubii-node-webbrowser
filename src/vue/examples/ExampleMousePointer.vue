@@ -106,10 +106,6 @@ import UbiiClientService from '../../ubiiNode/ubiiClientService.js';
 
 /* eslint-disable no-console */
 
-/*
-    "jquery": "^3.5.1",
-*/
-
 export default {
   name: 'ExampleMousePointer',
   /* STEP 1: mounted() is our vue component entry point, start here! */
@@ -139,7 +135,7 @@ export default {
   },
   data: () => {
     return {
-      showClientPointer: true,
+      showClientPointer: false,
       showServerPointer: true,
       mirrorPointer: false,
       ubiiClientService: UbiiClientService.instance,
@@ -454,7 +450,7 @@ export default {
     'header-description header-description'
     'description-general description-general';
   height: 100%;
-  color: white;
+  color: black;
 }
 
 .options {
@@ -465,7 +461,7 @@ export default {
 .mouse-pointer-area {
   grid-area: demo-mouse-area;
   margin: 10px;
-  border: 3px solid white;
+  border: 3px solid black;
 }
 
 .hideCursor {
@@ -515,7 +511,7 @@ export default {
 }
 
 .seperator {
-  border-bottom: solid 1px orange;
+  border-bottom: solid 1px purple;
   height: 10px;
   line-height: 20px;
   text-align: left;
@@ -525,7 +521,6 @@ export default {
   display: inline;
   padding-left: 15px;
   padding-right: 20px;
-  color: orange;
-  background-color: black;
+  color: purple;
 }
 </style>
