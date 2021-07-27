@@ -6,52 +6,48 @@
       <input class="input" v-model="serverIP" />
       <label>Service Port</label>
       <input class="input" v-model="servicePort" />
-      <button class="input btn-connect" @click="connectUbii()">
-        ⟲
-      </button>
+      <button class="input btn-connect" @click="connectUbii()">⟲</button>
     </div>
-    <!--<div class="page-header-wrapper">
-      <server-status id="server-status" />
-      <page-header />
-    </div>-->
 
-    <example-mouse-pointer />
+    <div class="router-view-wrapper">
+      <router-view class="router-view" />
+    </div>
   </div>
 </template>
 
 <script>
 import UbiiClientService from '../ubiiNode/ubiiClientService';
 import ServerStatus from './ServerStatus.vue';
-import ExampleMousePointer from './ExampleMousePointer.vue';
 
 export default {
   name: 'app',
   components: {
-    ExampleMousePointer,
-    ServerStatus
+    ServerStatus,
   },
-  data: function() {
+  data: function () {
     return {
       serverIP: window.location.hostname,
-      servicePort: 8102
+      servicePort: 8102,
     };
   },
-  mounted: function() {
+  mounted: function () {
     window.addEventListener('beforeunload', () => {
       UbiiClientService.instance.disconnect();
     });
     this.connectUbii();
   },
-  beforeDestroy: function() {
+  beforeDestroy: function () {
     UbiiClientService.instance.disconnect();
   },
   methods: {
-    connectUbii: function() {
+    connectUbii: function () {
       UbiiClientService.instance.setName('ubii-node-webbrowser VueJS Test');
-      UbiiClientService.instance.setHTTPS(window.location.protocol.includes('https'));
+      UbiiClientService.instance.setHTTPS(
+        window.location.protocol.includes('https')
+      );
       UbiiClientService.instance.connect(this.serverIP, this.servicePort);
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -62,7 +58,7 @@ export default {
   box-sizing: border-box;
   -moz-box-sizing: border-box;
   -webkit-box-sizing: border-box;
-  background-color: black;
+  background-color: white;
 }
 
 html,
@@ -94,5 +90,10 @@ body {
 
 .btn-connect {
   width: 25px;
+}
+
+.router-view-wrapper {
+  flex-grow: 1;
+  overflow: hidden;
 }
 </style>

@@ -102,7 +102,7 @@
 import ProtobufLibrary from '@tum-far/ubii-msg-formats/dist/js/protobuf';
 import { DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
 
-import UbiiClientService from '../ubiiNode/ubiiClientService.js';
+import UbiiClientService from '../../ubiiNode/ubiiClientService.js';
 
 /* eslint-disable no-console */
 
