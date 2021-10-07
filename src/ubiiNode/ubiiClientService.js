@@ -4,8 +4,7 @@ import EventEmitter from 'events';
 
 import ClientNodeWeb from './clientNodeWeb';
 
-const uuidv4Regex =
-  '[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}';
+const uuidv4Regex = '[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}';
 
 let _instance = null;
 const SINGLETON_ENFORCER = Symbol();
@@ -44,7 +43,7 @@ class UbiiClientService extends EventEmitter {
   }
 
   async connect(serverIP = window.location.hostname, servicePort = 8102) {
-    let changedAddress = (serverIP !== this.serverIP) || (servicePort !== this.servicePort);
+    let changedAddress = serverIP !== this.serverIP || servicePort !== this.servicePort;
     if (!changedAddress && (this.isConnected() || this.connecting)) {
       return this.waitForConnection();
     }
@@ -53,22 +52,19 @@ class UbiiClientService extends EventEmitter {
     this.servicePort = servicePort;
     this.connecting = true;
 
-    console.info('UbiiClientService - connecting to ' + this.serverIP + ':' + this.servicePort + '...');
+    console.info(
+      'UbiiClientService - connecting to ' + this.serverIP + ':' + this.servicePort + '...'
+    );
 
     if (!this.client) {
-      this.client = new ClientNodeWeb(
-        this.name,
-        this.serverIP,
-        this.servicePort
-      );
+      this.client = new ClientNodeWeb(this.name, this.serverIP, this.servicePort);
     }
 
     return this.client.initialize().then(
       () => {
         if (this.client.isInitialized()) {
           console.info(
-            'UbiiClientService - client connected with ID:\n' +
-              this.client.clientSpecification.id
+            'UbiiClientService - client connected with ID:\n' + this.client.clientSpecification.id
           );
           this.connecting = false;
 
@@ -80,10 +76,8 @@ class UbiiClientService extends EventEmitter {
           this.emit(UbiiClientService.EVENTS.CONNECT);
         }
       },
-      error => {
-        console.info(
-          'UbiiClientService.client.initialize() failed:\n' + error.toString()
-        );
+      (error) => {
+        console.info('UbiiClientService.client.initialize() failed:\n' + error.toString());
       }
     );
   }
@@ -98,7 +92,7 @@ class UbiiClientService extends EventEmitter {
     let id = this.client.clientSpecification.id;
 
     this.emit(UbiiClientService.EVENTS.DISCONNECT);
-    this.onDisconnectCallbacks.forEach(callback => {
+    this.onDisconnectCallbacks.forEach((callback) => {
       callback();
     });
 
@@ -183,22 +177,24 @@ class UbiiClientService extends EventEmitter {
     }
   }
 
-  publish(topicData) {
-    this.client && this.client.publish(topicData);
+  getPublishIntervalMs() {
+    return this.client && this.client.publishDelayMs;
+  }
+
+  setPublishIntervalMs(intervalMs) {
+    this.client && this.client.setPublishIntervalMs(intervalMs);
   }
 
   publishRecord(topicDataRecord) {
-    this.client &&
-      this.client.publish({
-        topicDataRecord: topicDataRecord
-      });
+    this.client && this.client.publishRecord(topicDataRecord);
   }
 
   publishRecordList(topicDataRecordList) {
-    this.client &&
-      this.client.publish({
-        topicDataRecordList: topicDataRecordList
-      });
+    this.client && this.client.publishRecordList(topicDataRecordList);
+  }
+
+  publishRecordImmediately(topicDataRecord) {
+    this.client && this.client.publishRecordImmediately(topicDataRecord);
   }
 
   async subscribeTopic(topic, callback) {
@@ -228,7 +224,7 @@ class UbiiClientService extends EventEmitter {
     return {
       seconds: seconds,
       nanos: nanos
-    }
+    };
   }
 }
 

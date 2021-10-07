@@ -2,30 +2,24 @@
 
 import RESTClient from './restClient';
 import WebsocketClient from './websocketClient';
-import {
-  ProtobufTranslator,
-  MSG_TYPES,
-  DEFAULT_TOPICS
-} from '@tum-far/ubii-msg-formats';
+import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
 
 class ClientNodeWeb {
-  constructor(name, serverHost, servicePort, forceHTTPS = false) {
+  constructor(name, serverHost, servicePort, forceHTTPS = false, publishDelayMs = 15) {
     // Properties:
     this.name = name;
     this.serverHost = serverHost;
     this.servicePort = servicePort;
     this.forceHTTPS = forceHTTPS;
+    this.publishDelayMs = publishDelayMs;
 
+    this.recordsToPublish = [];
     this.serviceClient = undefined;
     this.topicDataClient = undefined;
 
     // Translators:
-    this.translatorServiceReply = new ProtobufTranslator(
-      MSG_TYPES.SERVICE_REPLY
-    );
-    this.translatorServiceRequest = new ProtobufTranslator(
-      MSG_TYPES.SERVICE_REQUEST
-    );
+    this.translatorServiceReply = new ProtobufTranslator(MSG_TYPES.SERVICE_REPLY);
+    this.translatorServiceRequest = new ProtobufTranslator(MSG_TYPES.SERVICE_REQUEST);
     this.translatorTopicData = new ProtobufTranslator(MSG_TYPES.TOPIC_DATA);
 
     // Cache for specifications:
@@ -34,7 +28,6 @@ class ClientNodeWeb {
 
     this.topicDataCallbacks = new Map();
     this.topicDataRegexCallbacks = new Map();
-    //this.topicDataRegexes = new Map();
   }
 
   /**
@@ -56,11 +49,11 @@ class ClientNodeWeb {
                 this.initializeTopicDataClient();
                 return resolve();
               },
-              error => {
+              (error) => {
                 console.warn(error);
               }
             )
-            .catch(error => {
+            .catch((error) => {
               console.error(error);
               reject(error);
               throw error;
@@ -73,6 +66,7 @@ class ClientNodeWeb {
   }
 
   async deinitialize() {
+    this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     // unsubscribe all topics / regexes
     let topics = Array.from(this.topicDataCallbacks.keys());
     let regexes = Array.from(this.topicDataRegexCallbacks.keys());
@@ -85,17 +79,16 @@ class ClientNodeWeb {
     });
 
     // deregister all devices
-    this.deviceSpecifications.forEach(async deviceSpecs => {
+    for (let deviceSpecs of this.deviceSpecifications) {
       await this.deregisterDevice(deviceSpecs);
-    });
+    }
 
     // deregister client
-    return this.callService({
+    await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.CLIENT_DEREGISTRATION,
       client: this.clientSpecification
-    }).then(() => {
-      this.clientSpecification = undefined;
     });
+    this.clientSpecification = undefined;
   }
 
   async reinitialize() {
@@ -109,27 +102,25 @@ class ClientNodeWeb {
       this.serverHost,
       parseInt(this.serverSpecification.portTopicDataWs)
     );
-    this.topicDataClient.onMessageReceived(messageBuffer => {
+    this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
         // Decode the buffer.
         let arrayBuffer = messageBuffer.data;
-        let message = this.translatorTopicData.createMessageFromBuffer(
-          new Uint8Array(arrayBuffer)
-        );
+        let message = this.translatorTopicData.createMessageFromBuffer(new Uint8Array(arrayBuffer));
         this._onTopicDataMessageReceived(message);
       } catch (error) {
         console.error(error);
       }
     });
+
+    this.setPublishIntervalMs(this.publishDelayMs);
   }
 
   /**
    * Is this client already initialized?
    */
   isInitialized() {
-    return (
-      this.serviceClient !== undefined && this.topicDataClient !== undefined
-    );
+    return this.serviceClient !== undefined && this.topicDataClient !== undefined;
   }
 
   isConnected() {
@@ -147,16 +138,14 @@ class ClientNodeWeb {
     };
 
     return this.callService(message).then(
-      reply => {
+      (reply) => {
         if (reply.server !== undefined && reply.server !== null) {
           // Process the reply client specification.
           this.serverSpecification = reply.server;
-          this.ubiiConstants = JSON.parse(
-            this.serverSpecification.constantsJson
-          );
+          this.ubiiConstants = JSON.parse(this.serverSpecification.constantsJson);
         }
       },
-      error => {
+      (error) => {
         console.error(error);
       }
     );
@@ -177,7 +166,7 @@ class ClientNodeWeb {
       };
     }
 
-    return this.callService(message).then(reply => {
+    return this.callService(message).then((reply) => {
       if (reply.client) {
         this.clientSpecification = reply.client;
 
@@ -197,7 +186,7 @@ class ClientNodeWeb {
     };
 
     return this.callService(message).then(
-      reply => {
+      (reply) => {
         if (reply.device) {
           // Process the reply client specification.
           this.deviceSpecifications.set(reply.device.id, reply.device);
@@ -210,7 +199,7 @@ class ClientNodeWeb {
           return undefined;
         }
       },
-      error => {
+      (error) => {
         return error;
       }
     );
@@ -227,7 +216,7 @@ class ClientNodeWeb {
     };
 
     return this.callService(message).then(
-      reply => {
+      (reply) => {
         if (reply.success) {
           this.deviceSpecifications.delete(specs.id);
         }
@@ -236,7 +225,7 @@ class ClientNodeWeb {
           return reply.error;
         }
       },
-      error => {
+      (error) => {
         return error;
       }
     );
@@ -249,12 +238,12 @@ class ClientNodeWeb {
     };
 
     return this.callService(message).then(
-      reply => {
+      (reply) => {
         if (reply.session !== undefined && reply.session !== null) {
           return reply.session;
         }
       },
-      error => {
+      (error) => {
         console.error(error);
       }
     );
@@ -280,7 +269,7 @@ class ClientNodeWeb {
     };
 
     return this.callService(message).then(
-      reply => {
+      (reply) => {
         if (reply.success !== undefined && reply.success !== null) {
           let callbacks = this.topicDataCallbacks.get(topic);
           if (callbacks && callbacks.length > 0) {
@@ -289,12 +278,10 @@ class ClientNodeWeb {
             this.topicDataCallbacks.set(topic, [callback]);
           }
         } else {
-          console.error(
-            'ClientNodeWeb - subscribe failed (' + topic + ')\n' + reply
-          );
+          console.error('ClientNodeWeb - subscribe failed (' + topic + ')\n' + reply);
         }
       },
-      error => {
+      (error) => {
         console.error(error);
       }
     );
@@ -339,10 +326,7 @@ class ClientNodeWeb {
     // already subscribed to regexString, add callback to list
     let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
     if (registeredRegex) {
-      if (
-        registeredRegex.callbacks &&
-        Array.isArray(registeredRegex.callbacks)
-      ) {
+      if (registeredRegex.callbacks && Array.isArray(registeredRegex.callbacks)) {
         registeredRegex.callbacks.push(callback);
       } else {
         registeredRegex.callbacks = [callback];
@@ -382,12 +366,7 @@ class ClientNodeWeb {
           }
         }
       } catch (error) {
-        console.error(
-          'ClientNodeWeb - subscribeRegex(' +
-            regexString +
-            ') failed: \n' +
-            error
-        );
+        console.error('ClientNodeWeb - subscribeRegex(' + regexString + ') failed: \n' + error);
         return false;
       }
     }
@@ -436,12 +415,7 @@ class ClientNodeWeb {
           return false;
         }
       } catch (error) {
-        console.error(
-          'ClientNodeWeb - unsubscribeRegex(' +
-            regexString +
-            ') failed: \n' +
-            error
-        );
+        console.error('ClientNodeWeb - unsubscribeRegex(' + regexString + ') failed: \n' + error);
         return false;
       }
     }
@@ -482,19 +456,17 @@ class ClientNodeWeb {
       this.serviceClient
         .send('/services', message)
         .then(
-          reply => {
-            let message = this.translatorServiceReply.createMessageFromPayload(
-              reply
-            );
+          (reply) => {
+            let message = this.translatorServiceReply.createMessageFromPayload(reply);
 
             return resolve(message);
           },
-          rejection => {
+          (rejection) => {
             console.warn(rejection);
             return reject(rejection);
           }
         )
-        .catch(error => {
+        .catch((error) => {
           console.error(error);
         });
     });
@@ -504,19 +476,53 @@ class ClientNodeWeb {
    * Publish the specified value of the specified type under the specified topic to the master node.
    * @param {ubii.topicData.TopicData} topicData
    */
-  publish(topicData) {
+  /*publish(topicData) {
     let buffer = this.translatorTopicData.createBufferFromPayload(topicData);
+    this.topicDataClient.send(buffer);
+  }*/
 
+  publishRecord(record) {
+    this.recordsToPublish.push(record);
+  }
+
+  publishRecordList(recordList) {
+    this.recordsToPublish.push(...recordList);
+  }
+
+  flushRecordsToPublish() {
+    if (this.recordsToPublish.length === 0) return;
+
+    let buffer = this.translatorTopicData.createBufferFromPayload({
+      topicDataRecordList: {
+        elements: this.recordsToPublish
+      }
+    });
+    this.topicDataClient.send(buffer);
+
+    this.recordsToPublish = [];
+  }
+
+  setPublishIntervalMs(intervalMs) {
+    this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
+
+    this.intervalPublishRecords = setInterval(() => this.flushRecordsToPublish(), intervalMs);
+  }
+
+  publishRecordImmediately(topicDataRecord) {
+    let buffer = this.translatorTopicData.createBufferFromPayload({
+      topicDataRecord: topicDataRecord
+    });
     this.topicDataClient.send(buffer);
   }
 
   _onTopicDataMessageReceived(message) {
-    let record = message.topicDataRecord;
+    let recordList = message.topicDataRecordList ? message.topicDataRecordList : [];
+    message.topicDataRecord && recordList.push(message.topicDataRecord);
 
-    if (record && record.topic) {
+    for (let record of recordList) {
       let callbacks = this.topicDataCallbacks.get(record.topic);
       if (!callbacks) {
-        this.topicDataRegexCallbacks.forEach(value => {
+        this.topicDataRegexCallbacks.forEach((value) => {
           let regex = value.regex;
           if (regex.test(record.topic)) {
             callbacks = value.callbacks;
@@ -524,7 +530,7 @@ class ClientNodeWeb {
         });
       }
       callbacks &&
-        callbacks.forEach(cb => {
+        callbacks.forEach((cb) => {
           cb(record[record.type], record.topic);
         });
     }
