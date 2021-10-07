@@ -74,8 +74,8 @@ class ClientNodeWeb {
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
         unsubscribeTopics: topics,
-        unsubscribeTopicRegexp: regexes,
-      },
+        unsubscribeTopicRegexp: regexes
+      }
     });
 
     // deregister all devices
@@ -86,7 +86,7 @@ class ClientNodeWeb {
     // deregister client
     await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.CLIENT_DEREGISTRATION,
-      client: this.clientSpecification,
+      client: this.clientSpecification
     });
     this.clientSpecification = undefined;
   }
@@ -134,7 +134,7 @@ class ClientNodeWeb {
 
   async getServerConfig() {
     let message = {
-      topic: DEFAULT_TOPICS.SERVICES.SERVER_CONFIG,
+      topic: DEFAULT_TOPICS.SERVICES.SERVER_CONFIG
     };
 
     return this.callService(message).then(
@@ -156,13 +156,13 @@ class ClientNodeWeb {
    */
   async registerClient() {
     let message = {
-      topic: DEFAULT_TOPICS.SERVICES.CLIENT_REGISTRATION,
+      topic: DEFAULT_TOPICS.SERVICES.CLIENT_REGISTRATION
     };
     if (this.clientSpecification) {
       message.client = this.clientSpecification;
     } else {
       message.client = {
-        name: this.name,
+        name: this.name
       };
     }
 
@@ -182,7 +182,7 @@ class ClientNodeWeb {
   async registerDevice(device) {
     let message = {
       topic: DEFAULT_TOPICS.SERVICES.DEVICE_REGISTRATION,
-      device: device,
+      device: device
     };
 
     return this.callService(message).then(
@@ -212,7 +212,7 @@ class ClientNodeWeb {
   async deregisterDevice(specs) {
     let message = {
       topic: DEFAULT_TOPICS.SERVICES.DEVICE_DEREGISTRATION,
-      device: specs,
+      device: specs
     };
 
     return this.callService(message).then(
@@ -234,7 +234,7 @@ class ClientNodeWeb {
   async registerSession(session) {
     let message = {
       topic: DEFAULT_TOPICS.SERVICES.SESSION_REGISTRATION,
-      session: session,
+      session: session
     };
 
     return this.callService(message).then(
@@ -264,8 +264,8 @@ class ClientNodeWeb {
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
         clientId: this.clientSpecification.id,
-        subscribeTopics: [topic],
-      },
+        subscribeTopics: [topic]
+      }
     };
 
     return this.callService(message).then(
@@ -305,8 +305,8 @@ class ClientNodeWeb {
         topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
         topicSubscription: {
           clientId: this.clientSpecification.id,
-          unsubscribeTopics: [topic],
-        },
+          unsubscribeTopics: [topic]
+        }
       };
       this.callService(message);
     }
@@ -338,8 +338,8 @@ class ClientNodeWeb {
         topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
         topicSubscription: {
           clientId: this.clientSpecification.id,
-          subscribeTopicRegexp: [regexString],
-        },
+          subscribeTopicRegexp: [regexString]
+        }
       };
 
       try {
@@ -347,7 +347,7 @@ class ClientNodeWeb {
         if (reply.success !== undefined && reply.success !== null) {
           let newRegex = {
             callbacks: [callback],
-            regex: new RegExp(regexString),
+            regex: new RegExp(regexString)
           };
           this.topicDataRegexCallbacks.set(regexString, newRegex);
         } else {
@@ -397,8 +397,8 @@ class ClientNodeWeb {
         topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
         topicSubscription: {
           clientId: this.clientSpecification.id,
-          unsubscribeTopicRegexp: [regexString],
-        },
+          unsubscribeTopicRegexp: [regexString]
+        }
       };
 
       try {
@@ -505,15 +505,12 @@ class ClientNodeWeb {
   setPublishIntervalMs(intervalMs) {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
 
-    this.intervalPublishRecords = setInterval(
-      () => this.flushRecordsToPublish(),
-      intervalMs
-    );
+    this.intervalPublishRecords = setInterval(() => this.flushRecordsToPublish(), intervalMs);
   }
 
   publishRecordImmediately(topicDataRecord) {
     let buffer = this.translatorTopicData.createBufferFromPayload({
-      topicDataRecord: topicDataRecord,
+      topicDataRecord: topicDataRecord
     });
     this.topicDataClient.send(buffer);
   }

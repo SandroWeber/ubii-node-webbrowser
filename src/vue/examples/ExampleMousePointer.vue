@@ -42,7 +42,7 @@
           class="server-mouse-position-indicator"
           :style="{
             top: serverMousePosition.y + 'px',
-            left: serverMousePosition.x + 'px',
+            left: serverMousePosition.x + 'px'
           }"
           v-show="showServerPointer && clientPointerInside"
         ></div>
@@ -122,7 +122,7 @@ export default {
       exampleStarted: false,
       clientMousePosition: { x: 0, y: 0 },
       serverMousePosition: { x: 0, y: 0 },
-      clientPointerInside: false,
+      clientPointerInside: false
     };
   },
   watch: {
@@ -136,7 +136,7 @@ export default {
       }
 
       this.publishMirrorPointer(value);
-    },
+    }
   },
   methods: {
     createUbiiSpecs: function () {
@@ -159,21 +159,21 @@ export default {
           {
             ioType: ProtobufLibrary.ubii.devices.Component.IOType.PUBLISHER,
             topic: topicPrefix + '/mouse_client_position',
-            messageFormat: 'ubii.dataStructure.Vector2',
+            messageFormat: 'ubii.dataStructure.Vector2'
           },
           // component publishing the flag to invert the pointer position
           {
             ioType: ProtobufLibrary.ubii.devices.Component.IOType.PUBLISHER,
             topic: topicPrefix + '/mirror_mouse',
-            messageFormat: 'bool',
+            messageFormat: 'bool'
           },
           // component subscribing to the pointer position returned by the server processing module
           {
             ioType: ProtobufLibrary.ubii.devices.Component.IOType.SUBSCRIBER,
             topic: topicPrefix + '/mouse_server_position',
-            messageFormat: 'ubii.dataStructure.Vector2',
-          },
-        ],
+            messageFormat: 'ubii.dataStructure.Vector2'
+          }
+        ]
       };
       this.ubiiComponentClientPointer = this.ubiiDevice.components[0];
       this.ubiiComponentMirrorPointer = this.ubiiDevice.components[1];
@@ -189,12 +189,12 @@ export default {
         if (inputs.mirrorPointer === true) {
           outputs.serverPointer = {
             x: 1 - inputs.clientPointer.x,
-            y: 1 - inputs.clientPointer.y,
+            y: 1 - inputs.clientPointer.y
           };
         } else {
           outputs.serverPointer = {
             x: inputs.clientPointer.x,
-            y: inputs.clientPointer.y,
+            y: inputs.clientPointer.y
           };
         }
 
@@ -206,25 +206,25 @@ export default {
         onProcessingStringified: processingCallback.toString(),
         processingMode: {
           frequency: {
-            hertz: 30,
-          },
+            hertz: 30
+          }
         },
         inputs: [
           {
             internalName: 'clientPointer',
-            messageFormat: 'ubii.dataStructure.Vector2',
+            messageFormat: 'ubii.dataStructure.Vector2'
           },
           {
             internalName: 'mirrorPointer',
-            messageFormat: 'bool',
-          },
+            messageFormat: 'bool'
+          }
         ],
         outputs: [
           {
             internalName: 'serverPointer',
-            messageFormat: 'ubii.dataStructure.Vector2',
-          },
-        ],
+            messageFormat: 'ubii.dataStructure.Vector2'
+          }
+        ]
       };
       this.ubiiProcessingModule.inputClientPointer = this.ubiiProcessingModule.inputs[0];
       this.ubiiProcessingModule.inputMirrorPointer = this.ubiiProcessingModule.inputs[1];
@@ -242,23 +242,23 @@ export default {
               {
                 inputName: this.ubiiProcessingModule.inputClientPointer.internalName,
                 //topicSource: 'topic',
-                topic: this.ubiiComponentClientPointer.topic,
+                topic: this.ubiiComponentClientPointer.topic
               },
               {
                 inputName: this.ubiiProcessingModule.inputMirrorPointer.internalName,
                 //topicSource: 'topic',
-                topic: this.ubiiComponentMirrorPointer.topic,
-              },
+                topic: this.ubiiComponentMirrorPointer.topic
+              }
             ],
             outputMappings: [
               {
                 outputName: this.ubiiProcessingModule.outputServerPointer.internalName,
                 //topicDestination: 'topic',
-                topic: this.ubiiComponentServerPointer.topic,
-              },
-            ],
-          },
-        ],
+                topic: this.ubiiComponentServerPointer.topic
+              }
+            ]
+          }
+        ]
       };
     },
     /* STEP 2: making all calls related to ubi-interact backend */
@@ -296,7 +296,7 @@ export default {
       // start our session (registering not necessary as we do not want to save it permanently)
       let responseSessionStart = await UbiiClientService.instance.callService({
         topic: DEFAULT_TOPICS.SERVICES.SESSION_RUNTIME_START,
-        session: this.ubiiSession,
+        session: this.ubiiSession
       });
       if (responseSessionStart.session) {
         this.ubiiSession = responseSessionStart.session;
@@ -314,7 +314,7 @@ export default {
       );
       UbiiClientService.instance.client.callService({
         topic: DEFAULT_TOPICS.SERVICES.SESSION_RUNTIME_STOP,
-        session: this.ubiiSession,
+        session: this.ubiiSession
       });
 
       if (this.ubiiDevice) {
@@ -328,21 +328,21 @@ export default {
       let boundingRect = document.getElementById('mouse-pointer-area').getBoundingClientRect();
       this.$data.serverMousePosition = {
         x: vec2.x * boundingRect.width,
-        y: vec2.y * boundingRect.height,
+        y: vec2.y * boundingRect.height
       };
     },
     publishClientPointerPosition: function (vec2) {
       // publish our normalized client mouse position
       UbiiClientService.instance.publishRecord({
         topic: this.ubiiComponentClientPointer.topic,
-        vector2: vec2,
+        vector2: vec2
       });
     },
     publishMirrorPointer: function (boolean) {
       // if the checkbox is changed, we publish this info on the related topic
       UbiiClientService.instance.publishRecord({
         topic: this.ubiiComponentMirrorPointer.topic,
-        bool: boolean,
+        bool: boolean
       });
     },
     /* UI events */
@@ -355,7 +355,7 @@ export default {
       let boundingRect = document.getElementById('mouse-pointer-area').getBoundingClientRect();
       let relativeMousePosition = {
         x: (event.clientX - boundingRect.left) / boundingRect.width,
-        y: (event.clientY - boundingRect.top) / boundingRect.height,
+        y: (event.clientY - boundingRect.top) / boundingRect.height
       };
 
       this.$data.clientMousePosition = relativeMousePosition;
@@ -374,7 +374,7 @@ export default {
       // calculate the current touch position, normalized to the bounds of the interactive area ([0;1], [0;1])
       let relativeMousePosition = {
         x: (event.touches[0].clientX - event.target.offsetLeft) / event.target.offsetWidth,
-        y: (event.touches[0].clientY - event.target.offsetTop) / event.target.offsetHeight,
+        y: (event.touches[0].clientY - event.target.offsetTop) / event.target.offsetHeight
       };
 
       if (
@@ -390,8 +390,8 @@ export default {
       this.$data.clientMousePosition = relativeMousePosition;
       // publish our normalized client touch position
       this.publishClientPointerPosition(this.$data.clientMousePosition);
-    },
-  },
+    }
+  }
 };
 </script>
 

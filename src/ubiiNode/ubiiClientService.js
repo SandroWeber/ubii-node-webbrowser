@@ -180,7 +180,7 @@ class UbiiClientService extends EventEmitter {
   getPublishIntervalMs() {
     return this.client && this.client.publishDelayMs;
   }
-  
+
   setPublishIntervalMs(intervalMs) {
     this.client && this.client.setPublishIntervalMs(intervalMs);
   }
@@ -223,7 +223,7 @@ class UbiiClientService extends EventEmitter {
     let nanos = (now - seconds * 1000) * 1000000;
     return {
       seconds: seconds,
-      nanos: nanos,
+      nanos: nanos
     };
   }
 }
@@ -231,7 +231,7 @@ class UbiiClientService extends EventEmitter {
 UbiiClientService.EVENTS = Object.freeze({
   CONNECT: 'CONNECT',
   DISCONNECT: 'DISCONNECT',
-  RECONNECT: 'RECONNECT',
+  RECONNECT: 'RECONNECT'
 });
 
 export default UbiiClientService;
