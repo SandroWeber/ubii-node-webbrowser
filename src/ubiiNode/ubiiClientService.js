@@ -5,6 +5,7 @@ import EventEmitter from 'events';
 import ClientNodeWeb from './clientNodeWeb';
 
 const uuidv4Regex = '[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}';
+const MAX_RETRIES_WAIT_FOR_CONNECTION = 50;
 
 let _instance = null;
 const SINGLETON_ENFORCER = Symbol();
@@ -110,19 +111,18 @@ class UbiiClientService extends EventEmitter {
 
   waitForConnection() {
     return new Promise((resolve, reject) => {
-      let maxRetries = 10;
       let retry = 0;
 
       let checkConnection = () => {
         retry += 1;
 
-        if (retry > maxRetries) {
-          reject(false);
+        if (retry > MAX_RETRIES_WAIT_FOR_CONNECTION) {
+          reject('UbiiClientService.waitForConnection() - maximum retries exceeded.');
           return;
         }
 
         if (this.client && this.client.isConnected()) {
-          resolve(this.client.isConnected());
+          resolve('UbiiClientService is connected.');
           return;
         } else {
           setTimeout(() => {
