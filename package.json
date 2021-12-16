@@ -24,23 +24,23 @@
   ],
   "browser": "src/index.js",
   "dependencies": {
-    "@tum-far/ubii-msg-formats": "0.15.15"
+    "@tum-far/ubii-msg-formats": "0.15.16"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "1.2.35",
     "@fortawesome/free-solid-svg-icons": "5.15.3",
-    "@fortawesome/vue-fontawesome": "2.0.2",
-    "@vue/cli-plugin-babel": "4.5.13",
-    "@vue/cli-plugin-eslint": "4.5.13",
-    "@vue/cli-service": "4.5.13",
+    "@fortawesome/vue-fontawesome": "2.0.6",
+    "@vue/cli-plugin-babel": "4.5.15",
+    "@vue/cli-plugin-eslint": "4.5.15",
+    "@vue/cli-service": "4.5.15",
     "babel-eslint": "^10.1.0",
     "eslint": "7.28.0",
     "eslint-plugin-vue": "7.11.1",
     "npm": "7.17.0",
-    "prettier": "2.3.1",
-    "vue": "^2.6.11",
-    "vue-router": "^3.3.4",
-    "vue-template-compiler": "^2.6.11"
+    "prettier": "2.5.1",
+    "vue": "^2.6.14",
+    "vue-router": "3.5.3",
+    "vue-template-compiler": "^2.6.14"
   },
   "eslintConfig": {
     "root": true,
