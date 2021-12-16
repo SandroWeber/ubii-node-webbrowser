@@ -457,9 +457,16 @@ class ClientNodeWeb {
         .send('/services', message)
         .then(
           (reply) => {
-            let message = this.translatorServiceReply.createMessageFromPayload(reply);
+            // this will identify errors like enums that are left as their string representation instead of converted enum numbers etc.
+            // so not really compatible with sending service calls as JSON, rely on client handling here
+            /*try {
+              this.translatorServiceReply.verify(reply);
+            } catch (error) {
+              console.error('Ubi-Interact service reply seems malformed, verification failed. reply:\n' + JSON.stringify(reply));
+              console.error(error);
+            }*/
 
-            return resolve(message);
+            return resolve(reply);
           },
           (rejection) => {
             console.warn(rejection);
