@@ -43,22 +43,22 @@ class UbiiClientService extends EventEmitter {
     this.useHTTPS = bool;
   }
 
-  async connect(serverIP = window.location.hostname, servicePort = 8102) {
-    let changedAddress = serverIP !== this.serverIP || servicePort !== this.servicePort;
+  async connect(urlServices, urlTopicData) {
+    let changedAddress = urlServices !== this.urlServices || urlTopicData !== this.urlTopicData;
     if (!changedAddress && (this.isConnected() || this.connecting)) {
       return this.waitForConnection();
     }
 
-    this.serverIP = serverIP;
-    this.servicePort = servicePort;
+    this.urlServices = urlServices;
+    this.urlTopicData = urlTopicData;
     this.connecting = true;
 
     console.info(
-      'UbiiClientService - connecting to ' + this.serverIP + ':' + this.servicePort + '...'
+      'UbiiClientService - connecting to services=' + this.urlServices + ' and topicdata=' + this.urlTopicData + ' ...'
     );
 
     if (!this.client) {
-      this.client = new ClientNodeWeb(this.name, this.serverIP, this.servicePort);
+      this.client = new ClientNodeWeb(this.name, this.urlServices, this.urlTopicData);
     }
 
     return this.client.initialize().then(

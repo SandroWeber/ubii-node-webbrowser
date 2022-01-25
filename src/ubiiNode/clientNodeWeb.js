@@ -5,12 +5,11 @@ import WebsocketClient from './websocketClient';
 import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
 
 class ClientNodeWeb {
-  constructor(name, serverHost, servicePort, forceHTTPS = false, publishDelayMs = 15) {
+  constructor(name, urlServices, urlTopicData, publishDelayMs = 15) {
     // Properties:
     this.name = name;
-    this.serverHost = serverHost;
-    this.servicePort = servicePort;
-    this.forceHTTPS = forceHTTPS;
+    this.urlServices = urlServices;
+    this.urlTopicData = urlTopicData;
     this.publishDelayMs = publishDelayMs;
 
     this.recordsToPublish = [];
@@ -36,7 +35,7 @@ class ClientNodeWeb {
   async initialize() {
     return new Promise((resolve, reject) => {
       // STEP 1: open a request/reply-style service connection to server
-      this.serviceClient = new RESTClient(this.serverHost, this.servicePort);
+      this.serviceClient = new RESTClient(this.urlServices);
 
       // STEP 2: (service call) get the server configuration (ports, ....)
       this.getServerConfig().then(() => {
@@ -92,19 +91,17 @@ class ClientNodeWeb {
   }
 
   async reinitialize() {
-    this.serviceClient = new RESTClient(this.serverHost, this.servicePort);
+    this.serviceClient = new RESTClient(this.urlServices);
     this.initializeTopicDataClient();
   }
 
   initializeTopicDataClient() {
     this.topicDataClient = new WebsocketClient(
       this.clientSpecification.id,
-      this.serverHost,
-      parseInt(this.serverSpecification.portTopicDataWs)
+      this.urlTopicData
     );
     this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
-        // Decode the buffer.
         let arrayBuffer = messageBuffer.data;
         let message = this.translatorTopicData.createMessageFromBuffer(new Uint8Array(arrayBuffer));
         this._onTopicDataMessageReceived(message);
@@ -140,7 +137,6 @@ class ClientNodeWeb {
     return this.callService(message).then(
       (reply) => {
         if (reply.server !== undefined && reply.server !== null) {
-          // Process the reply client specification.
           this.serverSpecification = reply.server;
           this.ubiiConstants = JSON.parse(this.serverSpecification.constantsJson);
         }
@@ -425,9 +421,7 @@ class ClientNodeWeb {
 
   /**
    * Call a service specified by the topic with a message and callback.
-   * @param {String} topic The topic relating to the service to be called
    * @param {Object} message An object representing the protobuf message to be sent
-   * @param {Function} callback The function to be called with the reply
    */
   callService(message) {
     return new Promise((resolve, reject) => {
@@ -454,19 +448,12 @@ class ClientNodeWeb {
 
       // VARIANT B: JSON
       this.serviceClient
-        .send('/services', message)
+        .send(message)
         .then(
           (reply) => {
-            // this will identify errors like enums that are left as their string representation instead of converted enum numbers etc.
-            // so not really compatible with sending service calls as JSON, rely on client handling here
-            /*try {
-              this.translatorServiceReply.verify(reply);
-            } catch (error) {
-              console.error('Ubi-Interact service reply seems malformed, verification failed. reply:\n' + JSON.stringify(reply));
-              console.error(error);
-            }*/
+            let message = this.translatorServiceReply.createMessageFromPayload(reply);
 
-            return resolve(reply);
+            return resolve(message);
           },
           (rejection) => {
             console.warn(rejection);
@@ -478,15 +465,6 @@ class ClientNodeWeb {
         });
     });
   }
-
-  /**
-   * Publish the specified value of the specified type under the specified topic to the master node.
-   * @param {ubii.topicData.TopicData} topicData
-   */
-  /*publish(topicData) {
-    let buffer = this.translatorTopicData.createBufferFromPayload(topicData);
-    this.topicDataClient.send(buffer);
-  }*/
 
   publishRecord(record) {
     this.recordsToPublish.push(record);

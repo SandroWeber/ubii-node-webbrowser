@@ -7,17 +7,14 @@ const MSG_PONG = 'PONG';
 class WebsocketClient {
   /**
    * Communication endpoint implementing websocket.
-   * @param {*} identity ID string to uniquely identify this object. This id is used to route messages to this socket.
-   * @param {*} host Host to connect to.
-   * @param {*} port Port to connect to.
-   * @param {*} onReceive Callback function accepting a message parameter that is called when a new message is received.
-   * @param {*} autoconnect Should the socket connect directly after the initialization of the object?
+   * @param {string} identity ID string to uniquely identify this object. This id is used to route messages to this socket.
+   * @param {string} url URL to connect to.
+   * @param {boolean} autoconnect Should the socket connect directly after the initialization of the object?
    * If not, the start method must be called manually.
    */
-  constructor(identity, host = 'localhost', port = 5555, autoconnect = true) {
+  constructor(identity, url, autoconnect = true) {
     this.identity = identity;
-    this.host = host;
-    this.port = port;
+    this.url = url;
 
     this.textDecoder = new TextDecoder("utf-8");
 
@@ -34,15 +31,11 @@ class WebsocketClient {
    * Start the websocket client.
    */
   start() {
-    // init
     try {
-      let url = UbiiClientService.instance.useHTTPS ? 'wss://' : 'ws://';
-      url += `${this.host}:${this.port}?clientID=${this.identity}`;
-      this.websocket = new WebSocket(url);
+      this.websocket = new WebSocket(this.url + `?clientID=${this.identity}`);
     } catch (error) {
       console.error(error);
     }
-
     this.websocket.binaryType = 'arraybuffer';
 
     // add callbacks
@@ -80,13 +73,9 @@ class WebsocketClient {
    * @param {(string|Buffer)} message
    */
   send(message) {
-    // send
     this.websocket.send(message);
   }
 
-  /**
-   * Stop the dealer and close the socket.
-   */
   stop() {
     this.websocket.close();
   }
