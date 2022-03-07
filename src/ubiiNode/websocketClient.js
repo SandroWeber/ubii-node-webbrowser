@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-import UbiiClientService from './ubiiClientService';
 
 const MSG_PING = 'PING';
 const MSG_PONG = 'PONG';
