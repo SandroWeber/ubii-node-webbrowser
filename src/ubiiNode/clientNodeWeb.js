@@ -451,9 +451,7 @@ class ClientNodeWeb {
         .send(message)
         .then(
           (reply) => {
-            let message = this.translatorServiceReply.createMessageFromPayload(reply);
-
-            return resolve(message);
+            return resolve(reply);
           },
           (rejection) => {
             console.warn(rejection);
