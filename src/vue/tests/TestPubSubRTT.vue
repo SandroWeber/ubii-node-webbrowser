@@ -106,7 +106,7 @@ export default {
     },
     rttSendPackage: function () {
       this.testData.tSent = Date.now();
-      this.ubiiService.publishRecord({
+      this.ubiiService.publishRecordImmediately({
         topic: this.testData.topic,
         double: 1,
       });

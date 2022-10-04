@@ -96,10 +96,7 @@ class ClientNodeWeb {
   }
 
   initializeTopicDataClient() {
-    this.topicDataClient = new WebsocketClient(
-      this.clientSpecification.id,
-      this.urlTopicData
-    );
+    this.topicDataClient = new WebsocketClient(this.clientSpecification.id, this.urlTopicData);
     this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
         let arrayBuffer = messageBuffer.data;
@@ -518,6 +515,24 @@ class ClientNodeWeb {
         });
     }
   }
+}
+
+let subscriptionTokenID = -1;
+let generateSubscriptionToken = (topic, callback, subscriptionType) => {
+  let tokenID = ++subscriptionTokenID;
+
+  let token = {
+    id: tokenID,
+    topic: topic,
+    type: subscriptionType,
+    callback: callback
+  };
+  if (subscriptionType === SUBSCRIPTION_TYPES.REGEX) {
+    token.regex = new RegExp(topic);
+    token.regexTopicMatches = [];
+  }
+
+  return token;
 }
 
 export default ClientNodeWeb;
