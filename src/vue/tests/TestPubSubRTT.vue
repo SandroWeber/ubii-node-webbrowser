@@ -95,13 +95,13 @@ export default {
       this.prepareTestRTT();
       await this.ubiiSetupRTT();
 
-      await this.ubiiService.subscribeTopic(this.testData.topic, this.rttReceivePackage);
+      this.subToken = await this.ubiiService.subscribeTopic(this.testData.topic, this.rttReceivePackage);
       this.rttSendPackage();
     },
     stopTestRTT: function () {
       if (this.testData && this.testData.avgRTT) {
         this.testData.status = this.testData.avgRTT.toString() + 'ms';
-        this.ubiiService.unsubscribeTopic(this.testData.topic, this.rttReceivePackage);
+        this.ubiiService.unsubscribe(this.subToken);
       }
     },
     rttSendPackage: function () {

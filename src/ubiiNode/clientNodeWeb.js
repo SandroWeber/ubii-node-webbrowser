@@ -84,8 +84,8 @@ class ClientNodeWeb {
   async deinitialize() {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     // unsubscribe all topics / regexes
-    let topics = Array.from(this.topicDataCallbacks.keys());
-    let regexes = Array.from(this.topicDataRegexCallbacks.keys());
+    let topics = Array.from(this.topicDataBuffer.getAllTopics());
+    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map(token => token.topic));
     await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {

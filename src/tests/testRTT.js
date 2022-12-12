@@ -36,13 +36,13 @@ export default class TestRTT extends EventTarget {
 
     this.results = {};
 
-    await UbiiClientService.instance.subscribeTopic(this.testRTT.topic, this.receiveMessage);
+    this.subToken = await UbiiClientService.instance.subscribeTopic(this.testRTT.topic, this.receiveMessage);
   }
 
   async stop() {
     this.setStatus(TestRTT.STATUS.STOPPED);
 
-    await this.ubiiNode.unsubscribeTopic(this.testRTT.topic, this.receiveMessage);
+    await this.ubiiNode.unsubscribe(this.subToken);
   }
 
   finish() {
