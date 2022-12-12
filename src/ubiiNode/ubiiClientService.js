@@ -201,16 +201,20 @@ class UbiiClientService extends EventEmitter {
     return this.client && this.client.subscribeTopic(topic, callback);
   }
 
-  async unsubscribeTopic(topic, callback) {
+  /*async unsubscribeTopic(topic, callback) {
     return this.client && this.client.unsubscribeTopic(topic, callback);
-  }
+  }*/
 
   subscribeRegex(regex, callback) {
     return this.client && this.client.subscribeRegex(regex, callback);
   }
 
-  unsubscribeRegex(regex, callback) {
+  /*unsubscribeRegex(regex, callback) {
     return this.client && this.client.unsubscribeRegex(regex, callback);
+  }*/
+
+  async unsubscribe(token) {
+    return await this.client.unsubscribe(token);
   }
 
   getUUIDv4Regex() {
@@ -218,12 +222,11 @@ class UbiiClientService extends EventEmitter {
   }
 
   generateTimestamp() {
-    let now = Date.now();
+    /*let now = Date.now();
     let seconds = Math.floor(now / 1000);
-    let nanos = (now - seconds * 1000) * 1000000;
+    let nanos = (now - seconds * 1000) * 1000000;*/
     return {
-      seconds: seconds,
-      nanos: nanos
+      millis: performance.now()
     };
   }
 }

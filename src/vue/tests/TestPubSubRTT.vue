@@ -60,7 +60,7 @@ export default {
         status: 'unmeasured',
         timings: [],
         avgRTT: undefined,
-        messageCount: '1000',
+        messageCount: '100',
         topic: undefined,
         device: {
           name: 'RTT_test_device',
