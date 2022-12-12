@@ -633,4 +633,22 @@ class ClientNodeWeb {
   }
 }
 
+let subscriptionTokenID = -1;
+let generateSubscriptionToken = (topic, callback, subscriptionType) => {
+  let tokenID = ++subscriptionTokenID;
+
+  let token = {
+    id: tokenID,
+    topic: topic,
+    type: subscriptionType,
+    callback: callback
+  };
+  if (subscriptionType === SUBSCRIPTION_TYPES.REGEX) {
+    token.regex = new RegExp(topic);
+    token.regexTopicMatches = [];
+  }
+
+  return token;
+}
+
 export default ClientNodeWeb;

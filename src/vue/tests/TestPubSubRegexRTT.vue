@@ -117,7 +117,7 @@ export default {
     rttSendPackage: function () {
       let topic = this.getRandomTopic();
       this.testData.tSent = Date.now();
-      topic && this.ubiiService.publishRecord({
+      topic && this.ubiiService.publishRecordImmediately({
         topic: topic,
         double: 1,
       });
