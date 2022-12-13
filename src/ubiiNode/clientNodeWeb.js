@@ -3,8 +3,23 @@
 import RESTClient from './restClient';
 import WebsocketClient from './websocketClient';
 import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
+import { RuntimeTopicData, SUBSCRIPTION_TYPES } from '@tum-far/ubii-topic-data';
+
+const LOG_TAG = 'UbiiNode';
+
+/*const logInfo = (msg) => {
+  console.info(LOG_TAG + '\n' + msg);
+}
+const logWarning = (msg) => {
+  console.warn(LOG_TAG + '\n' + msg);
+}*/
+const logError = (msg) => {
+  console.error(LOG_TAG + '\n' + msg);
+}
 
 class ClientNodeWeb {
+  get id() { return this.clientSpecification.id; }
+
   constructor(name, urlServices, urlTopicData, publishDelayMs = 15) {
     // Properties:
     this.name = name;
@@ -15,6 +30,8 @@ class ClientNodeWeb {
     this.recordsToPublish = [];
     this.serviceClient = undefined;
     this.topicDataClient = undefined;
+
+    this.topicDataBuffer = new RuntimeTopicData();
 
     // Translators:
     this.translatorServiceReply = new ProtobufTranslator(MSG_TYPES.SERVICE_REPLY);
@@ -67,8 +84,8 @@ class ClientNodeWeb {
   async deinitialize() {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     // unsubscribe all topics / regexes
-    let topics = Array.from(this.topicDataCallbacks.keys());
-    let regexes = Array.from(this.topicDataRegexCallbacks.keys());
+    let topics = Array.from(this.topicDataBuffer.getAllTopics());
+    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map(token => token.topic));
     await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
@@ -96,10 +113,7 @@ class ClientNodeWeb {
   }
 
   initializeTopicDataClient() {
-    this.topicDataClient = new WebsocketClient(
-      this.clientSpecification.id,
-      this.urlTopicData
-    );
+    this.topicDataClient = new WebsocketClient(this.id, this.urlTopicData);
     this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
         let arrayBuffer = messageBuffer.data;
@@ -246,180 +260,6 @@ class ClientNodeWeb {
   }
 
   /**
-   * Subscribe to the specified topic.
-   * @param {*} topic
-   * @param {*} callback
-   */
-  async subscribeTopic(topic, callback) {
-    if (typeof callback !== 'function') {
-      console.error('UbiiClientNode.subscribeTopic() - callback passed is not a function!');
-      return false;
-    }
-
-    let message = {
-      topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-      topicSubscription: {
-        clientId: this.clientSpecification.id,
-        subscribeTopics: [topic]
-      }
-    };
-
-    return this.callService(message).then(
-      (reply) => {
-        if (reply.success !== undefined && reply.success !== null) {
-          let callbacks = this.topicDataCallbacks.get(topic);
-          if (callbacks && callbacks.length > 0) {
-            callbacks.push(callback);
-          } else {
-            this.topicDataCallbacks.set(topic, [callback]);
-          }
-        } else {
-          console.error('ClientNodeWeb - subscribe failed (' + topic + ')\n' + reply);
-        }
-      },
-      (error) => {
-        console.error(error);
-      }
-    );
-  }
-
-  async unsubscribeTopic(topic, callback = undefined) {
-    let currentCallbacks = this.topicDataCallbacks.get(topic);
-    if (currentCallbacks && currentCallbacks.length > 0) {
-      if (!callback) {
-        this.topicDataCallbacks.delete(topic);
-      } else {
-        let index = currentCallbacks.indexOf(callback);
-        if (index !== -1) currentCallbacks.splice(index, 1);
-      }
-    }
-
-    if (currentCallbacks && currentCallbacks.length === 0) {
-      this.topicDataCallbacks.delete(topic);
-
-      let message = {
-        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-        topicSubscription: {
-          clientId: this.clientSpecification.id,
-          unsubscribeTopics: [topic]
-        }
-      };
-      this.callService(message);
-    }
-  }
-
-  /**
-   * Subscribe to the specified regex.
-   * @param {*} regexString
-   * @param {*} callback
-   */
-  async subscribeRegex(regexString, callback) {
-    if (typeof callback !== 'function') {
-      console.error('UbiiClientNode.subscribeRegex() - callback passed is not a function!');
-      return false;
-    }
-
-    // already subscribed to regexString, add callback to list
-    let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
-    if (registeredRegex) {
-      if (registeredRegex.callbacks && Array.isArray(registeredRegex.callbacks)) {
-        registeredRegex.callbacks.push(callback);
-      } else {
-        registeredRegex.callbacks = [callback];
-      }
-    }
-    // need to subscribe at backend
-    else {
-      let message = {
-        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-        topicSubscription: {
-          clientId: this.clientSpecification.id,
-          subscribeTopicRegexp: [regexString]
-        }
-      };
-
-      try {
-        let reply = await this.callService(message);
-        if (reply.success !== undefined && reply.success !== null) {
-          let newRegex = {
-            callbacks: [callback],
-            regex: new RegExp(regexString)
-          };
-          this.topicDataRegexCallbacks.set(regexString, newRegex);
-        } else {
-          // another component subscribed in the meantime?
-          let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
-          if (registeredRegex && registeredRegex.callbacks.length > 0) {
-            registeredRegex.callbacks.push(callback);
-          } else {
-            console.error(
-              'ClientNodeWeb - could not subscribe to regex ' +
-                regexString +
-                ', response:\n' +
-                reply
-            );
-            return false;
-          }
-        }
-      } catch (error) {
-        console.error('ClientNodeWeb - subscribeRegex(' + regexString + ') failed: \n' + error);
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Unsubscribe from the specified regex.
-   * @param {*} regexString
-   * @param {*} callback
-   */
-  async unsubscribeRegex(regexString, callback) {
-    let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
-    if (registeredRegex === undefined) {
-      return false;
-    }
-
-    // remove callback from list of callbacks
-    let index = registeredRegex.callbacks.indexOf(callback);
-    if (index >= 0) {
-      registeredRegex.callbacks.splice(index, 1);
-    }
-
-    // if no callbacks left, unsubscribe at backend
-    if (registeredRegex.callbacks.length === 0) {
-      let message = {
-        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-        topicSubscription: {
-          clientId: this.clientSpecification.id,
-          unsubscribeTopicRegexp: [regexString]
-        }
-      };
-
-      try {
-        let reply = await this.callService(message);
-        if (reply.success !== undefined && reply.success !== null) {
-          this.topicDataRegexCallbacks.delete(regexString);
-        } else {
-          console.error(
-            'ClientNodeWeb - could not unsubscribe from regex ' +
-              regexString +
-              ', response:\n' +
-              reply
-          );
-          return false;
-        }
-      } catch (error) {
-        console.error('ClientNodeWeb - unsubscribeRegex(' + regexString + ') failed: \n' + error);
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
    * Call a service specified by the topic with a message and callback.
    * @param {Object} message An object representing the protobuf message to be sent
    */
@@ -464,6 +304,118 @@ class ClientNodeWeb {
     });
   }
 
+  /**
+   * Subscribe to the specified topic.
+   * @param {*} topic
+   * @param {*} callback
+   */
+  async subscribeTopic(topic, callback) {
+    let subscriptions = this.topicDataBuffer.getSubscriptionTokensForTopic(topic);
+    if (!subscriptions || subscriptions.length === 0) {
+      let message = {
+        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+        topicSubscription: {
+          clientId: this.id,
+          subscribeTopics: [topic]
+        }
+      };
+
+      try {
+        let replySubscribe = await this.callService(message);
+        if (replySubscribe.error) {
+          logError('server error during subscribe to "' + topic + '": ' + replySubscribe.error);
+          return replySubscribe.error;
+        }
+      } catch (error) {
+        console.error(
+          'local error during subscribe to "' + topic + '": ' + error
+        );
+        return error;
+      }
+    }
+
+    let token = this.topicDataBuffer.subscribeTopic(topic, (record) => {
+      callback(record);
+    });
+
+    return token;
+  }
+
+  /**
+   * Subscribe to the specified regex.
+   * @param {*} regexString
+   * @param {*} callback
+   */
+  async subscribeRegex(regexString, callback) {
+    let subscriptions = this.topicDataBuffer.getSubscriptionTokensForRegex(regexString);
+    if (!subscriptions || subscriptions.length === 0) {
+      let message = {
+        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+        topicSubscription: {
+          clientId: this.id,
+          subscribeTopicRegexp: [regexString]
+        }
+      };
+
+      try {
+        let replySubscribe = await this.callService(message);
+        if (replySubscribe.error) {
+          return replySubscribe.error;
+        }
+      } catch (error) {
+        logError(error);
+        return error;
+      }
+    }
+
+    let token = this.topicDataBuffer.subscribeRegex(regexString, (record) => {
+      callback(record);
+    });
+
+    return token;
+  }
+
+  /**
+   * Unsubscribe at topicdata and possibly at master node.
+   * @param {*} token
+   */
+  async unsubscribe(token) {
+    let result = this.topicDataBuffer.unsubscribe(token);
+
+    let subs = undefined;
+    if (token.type === SUBSCRIPTION_TYPES.TOPIC) {
+      subs = this.topicDataBuffer.getSubscriptionTokensForTopic(token.topic);
+    } else if (token.type === SUBSCRIPTION_TYPES.REGEX) {
+      subs = this.topicDataBuffer.getSubscriptionTokensForRegex(token.topic);
+    }
+
+    if (!subs || subs.length === 0) {
+      let message = {
+        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+        topicSubscription: {
+          clientId: this.id
+        }
+      };
+      if (token.type === SUBSCRIPTION_TYPES.TOPIC) {
+        message.topicSubscription.unsubscribeTopics = [token.topic];
+      } else if (token.type === SUBSCRIPTION_TYPES.REGEX) {
+        message.topicSubscription.unsubscribeTopicRegexp = [token.topic];
+      }
+
+      try {
+        let replySubscribe = await this.callService(message);
+        if (replySubscribe.error) {
+          return replySubscribe.error;
+        }
+      } catch (error) {
+        logError(error);
+        return error;
+      }
+    }
+
+    return result;
+  }
+
   publishRecord(record) {
     this.recordsToPublish.push(record);
   }
@@ -487,13 +439,12 @@ class ClientNodeWeb {
 
   setPublishIntervalMs(intervalMs) {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
-
     this.intervalPublishRecords = setInterval(() => this.flushRecordsToPublish(), intervalMs);
   }
 
-  publishRecordImmediately(topicDataRecord) {
+  publishRecordImmediately(record) {
     let buffer = this.translatorTopicData.createBufferFromPayload({
-      topicDataRecord: topicDataRecord
+      topicDataRecord: record
     });
     this.topicDataClient.send(buffer);
   }
@@ -503,19 +454,7 @@ class ClientNodeWeb {
     message.topicDataRecord && recordList.push(message.topicDataRecord);
 
     for (let record of recordList) {
-      let callbacks = this.topicDataCallbacks.get(record.topic);
-      if (!callbacks) {
-        this.topicDataRegexCallbacks.forEach((value) => {
-          let regex = value.regex;
-          if (regex.test(record.topic)) {
-            callbacks = value.callbacks;
-          }
-        });
-      }
-      callbacks &&
-        callbacks.forEach((cb) => {
-          cb(record[record.type], record.topic);
-        });
+      this.topicDataBuffer.publish(record.topic, record);
     }
   }
 }
