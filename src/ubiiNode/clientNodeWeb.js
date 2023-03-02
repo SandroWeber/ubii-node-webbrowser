@@ -3,8 +3,25 @@
 import RESTClient from './restClient';
 import WebsocketClient from './websocketClient';
 import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
+import { RuntimeTopicData, SUBSCRIPTION_TYPES } from '@tum-far/ubii-topic-data';
+
+import FilterUtils from '../filterUtils';
+
+const LOG_TAG = 'UbiiNode';
+
+/*const logInfo = (msg) => {
+  console.info(LOG_TAG + '\n' + msg);
+}
+const logWarning = (msg) => {
+  console.warn(LOG_TAG + '\n' + msg);
+}*/
+const logError = (msg) => {
+  console.error(LOG_TAG + '\n' + msg);
+}
 
 class ClientNodeWeb {
+  get id() { return this.clientSpecification.id; }
+
   constructor(name, urlServices, urlTopicData, publishDelayMs = 15) {
     // Properties:
     this.name = name;
@@ -15,6 +32,8 @@ class ClientNodeWeb {
     this.recordsToPublish = [];
     this.serviceClient = undefined;
     this.topicDataClient = undefined;
+
+    this.topicDataBuffer = new RuntimeTopicData();
 
     // Translators:
     this.translatorServiceReply = new ProtobufTranslator(MSG_TYPES.SERVICE_REPLY);
@@ -27,6 +46,11 @@ class ClientNodeWeb {
 
     this.topicDataCallbacks = new Map();
     this.topicDataRegexCallbacks = new Map();
+
+
+    this.componentSubs = new Map();
+    this.mapTopics2ComponentSubs = new Map();
+    this.componentSubscriptionId = 0;
   }
 
   /**
@@ -38,14 +62,14 @@ class ClientNodeWeb {
       this.serviceClient = new RESTClient(this.urlServices);
 
       // STEP 2: (service call) get the server configuration (ports, ....)
-      this.getServerConfig().then(() => {
+      this.getServerConfig().then(async () => {
         // STEP 3: (service call) register yourself as a client
         if (!this.clientSpecification) {
           this.registerClient()
             .then(
-              () => {
+              async () => {
                 // STEP 4: open the asynchronous connection for topic data communication (needs valid client ID from registration)
-                this.initializeTopicDataClient();
+                await this.initializeTopicDataClient();
                 return resolve();
               },
               (error) => {
@@ -58,7 +82,7 @@ class ClientNodeWeb {
               throw error;
             });
         } else {
-          this.initializeTopicDataClient();
+          await this.initializeTopicDataClient();
         }
       });
     });
@@ -67,8 +91,8 @@ class ClientNodeWeb {
   async deinitialize() {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     // unsubscribe all topics / regexes
-    let topics = Array.from(this.topicDataCallbacks.keys());
-    let regexes = Array.from(this.topicDataRegexCallbacks.keys());
+    let topics = Array.from(this.topicDataBuffer.getAllTopics());
+    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map(token => token.topic));
     await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
@@ -92,11 +116,11 @@ class ClientNodeWeb {
 
   async reinitialize() {
     this.serviceClient = new RESTClient(this.urlServices);
-    this.initializeTopicDataClient();
+    await this.initializeTopicDataClient();
   }
 
-  initializeTopicDataClient() {
-    this.topicDataClient = new WebsocketClient(this.clientSpecification.id, this.urlTopicData);
+  async initializeTopicDataClient() {
+    this.topicDataClient = new WebsocketClient(this.id, this.urlTopicData);
     this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
         let arrayBuffer = messageBuffer.data;
@@ -108,6 +132,15 @@ class ClientNodeWeb {
     });
 
     this.setPublishIntervalMs(this.publishDelayMs);
+    
+    this.subTokenInfoNewDevices = await this.subscribeTopic('/info/device/new', (record) => {
+      console.info('callback for "/info/device/new"');
+      console.info(record.device);
+      for (let newComponent of record.device.components) {
+        let matchingSubs = this.getMatchingComponentSubscriptions(newComponent);
+        this.addComponentSubListForTopic(newComponent.topic, matchingSubs);
+      }
+    });
   }
 
   /**
@@ -243,180 +276,6 @@ class ClientNodeWeb {
   }
 
   /**
-   * Subscribe to the specified topic.
-   * @param {*} topic
-   * @param {*} callback
-   */
-  async subscribeTopic(topic, callback) {
-    if (typeof callback !== 'function') {
-      console.error('UbiiClientNode.subscribeTopic() - callback passed is not a function!');
-      return false;
-    }
-
-    let message = {
-      topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-      topicSubscription: {
-        clientId: this.clientSpecification.id,
-        subscribeTopics: [topic]
-      }
-    };
-
-    return this.callService(message).then(
-      (reply) => {
-        if (reply.success !== undefined && reply.success !== null) {
-          let callbacks = this.topicDataCallbacks.get(topic);
-          if (callbacks && callbacks.length > 0) {
-            callbacks.push(callback);
-          } else {
-            this.topicDataCallbacks.set(topic, [callback]);
-          }
-        } else {
-          console.error('ClientNodeWeb - subscribe failed (' + topic + ')\n' + reply);
-        }
-      },
-      (error) => {
-        console.error(error);
-      }
-    );
-  }
-
-  async unsubscribeTopic(topic, callback = undefined) {
-    let currentCallbacks = this.topicDataCallbacks.get(topic);
-    if (currentCallbacks && currentCallbacks.length > 0) {
-      if (!callback) {
-        this.topicDataCallbacks.delete(topic);
-      } else {
-        let index = currentCallbacks.indexOf(callback);
-        if (index !== -1) currentCallbacks.splice(index, 1);
-      }
-    }
-
-    if (currentCallbacks && currentCallbacks.length === 0) {
-      this.topicDataCallbacks.delete(topic);
-
-      let message = {
-        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-        topicSubscription: {
-          clientId: this.clientSpecification.id,
-          unsubscribeTopics: [topic]
-        }
-      };
-      this.callService(message);
-    }
-  }
-
-  /**
-   * Subscribe to the specified regex.
-   * @param {*} regexString
-   * @param {*} callback
-   */
-  async subscribeRegex(regexString, callback) {
-    if (typeof callback !== 'function') {
-      console.error('UbiiClientNode.subscribeRegex() - callback passed is not a function!');
-      return false;
-    }
-
-    // already subscribed to regexString, add callback to list
-    let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
-    if (registeredRegex) {
-      if (registeredRegex.callbacks && Array.isArray(registeredRegex.callbacks)) {
-        registeredRegex.callbacks.push(callback);
-      } else {
-        registeredRegex.callbacks = [callback];
-      }
-    }
-    // need to subscribe at backend
-    else {
-      let message = {
-        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-        topicSubscription: {
-          clientId: this.clientSpecification.id,
-          subscribeTopicRegexp: [regexString]
-        }
-      };
-
-      try {
-        let reply = await this.callService(message);
-        if (reply.success !== undefined && reply.success !== null) {
-          let newRegex = {
-            callbacks: [callback],
-            regex: new RegExp(regexString)
-          };
-          this.topicDataRegexCallbacks.set(regexString, newRegex);
-        } else {
-          // another component subscribed in the meantime?
-          let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
-          if (registeredRegex && registeredRegex.callbacks.length > 0) {
-            registeredRegex.callbacks.push(callback);
-          } else {
-            console.error(
-              'ClientNodeWeb - could not subscribe to regex ' +
-                regexString +
-                ', response:\n' +
-                reply
-            );
-            return false;
-          }
-        }
-      } catch (error) {
-        console.error('ClientNodeWeb - subscribeRegex(' + regexString + ') failed: \n' + error);
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
-   * Unsubscribe from the specified regex.
-   * @param {*} regexString
-   * @param {*} callback
-   */
-  async unsubscribeRegex(regexString, callback) {
-    let registeredRegex = this.topicDataRegexCallbacks.get(regexString);
-    if (registeredRegex === undefined) {
-      return false;
-    }
-
-    // remove callback from list of callbacks
-    let index = registeredRegex.callbacks.indexOf(callback);
-    if (index >= 0) {
-      registeredRegex.callbacks.splice(index, 1);
-    }
-
-    // if no callbacks left, unsubscribe at backend
-    if (registeredRegex.callbacks.length === 0) {
-      let message = {
-        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
-        topicSubscription: {
-          clientId: this.clientSpecification.id,
-          unsubscribeTopicRegexp: [regexString]
-        }
-      };
-
-      try {
-        let reply = await this.callService(message);
-        if (reply.success !== undefined && reply.success !== null) {
-          this.topicDataRegexCallbacks.delete(regexString);
-        } else {
-          console.error(
-            'ClientNodeWeb - could not unsubscribe from regex ' +
-              regexString +
-              ', response:\n' +
-              reply
-          );
-          return false;
-        }
-      } catch (error) {
-        console.error('ClientNodeWeb - unsubscribeRegex(' + regexString + ') failed: \n' + error);
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  /**
    * Call a service specified by the topic with a message and callback.
    * @param {Object} message An object representing the protobuf message to be sent
    */
@@ -461,6 +320,208 @@ class ClientNodeWeb {
     });
   }
 
+  /**
+   * Subscribe to the specified topic.
+   * @param {*} topic
+   * @param {*} callback
+   */
+  async subscribeTopic(topic, callback) {
+    let subscriptions = this.topicDataBuffer.getSubscriptionTokensForTopic(topic);
+    if (!subscriptions || subscriptions.length === 0) {
+      let message = {
+        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+        topicSubscription: {
+          clientId: this.id,
+          subscribeTopics: [topic]
+        }
+      };
+
+      try {
+        let replySubscribe = await this.callService(message);
+        if (replySubscribe.error) {
+          logError('server error during subscribe to "' + topic + '": ' + replySubscribe.error);
+          return replySubscribe.error;
+        }
+      } catch (error) {
+        console.error(
+          'local error during subscribe to "' + topic + '": ' + error
+        );
+        return error;
+      }
+    }
+
+    let token = this.topicDataBuffer.subscribeTopic(topic, (record) => {
+      callback(record);
+    });
+
+    return token;
+  }
+
+  /**
+   * Subscribe to the specified regex.
+   * @param {*} regexString
+   * @param {*} callback
+   */
+  async subscribeRegex(regexString, callback) {
+    let subscriptions = this.topicDataBuffer.getSubscriptionTokensForRegex(regexString);
+    if (!subscriptions || subscriptions.length === 0) {
+      let message = {
+        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+        topicSubscription: {
+          clientId: this.id,
+          subscribeTopicRegexp: [regexString]
+        }
+      };
+
+      try {
+        let replySubscribe = await this.callService(message);
+        if (replySubscribe.error) {
+          return replySubscribe.error;
+        }
+      } catch (error) {
+        logError(error);
+        return error;
+      }
+    }
+
+    let token = this.topicDataBuffer.subscribeRegex(regexString, (record) => {
+      callback(record);
+    });
+
+    return token;
+  }
+
+  /**
+   * Subscribe to the specified component(s).
+   * @param {*} regexString
+   * @param {*} callback
+   */
+  async subscribeComponents(componentProfile, callback) {
+    console.info('subscribeComponents()');
+    let subscription = this.getComponentSubscription(componentProfile);
+    if (typeof subscription === 'undefined') {
+      try {
+        let replySubscribe = await this.callService({
+          topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+          topicSubscription: {
+            clientId: this.id,
+            subscribeComponents: [componentProfile]
+          }
+        });
+        if (replySubscribe.error) return replySubscribe.error;
+        
+        subscription = {
+          tokens: []
+        };
+        this.componentSubs.set(componentProfile, subscription);
+
+        let replyMatchingComponentList = await this.callService({
+          topic: DEFAULT_TOPICS.SERVICES.COMPONENT_GET_LIST,
+          component: componentProfile
+        });
+        if (replyMatchingComponentList.error) return replyMatchingComponentList.error;
+        else if (replyMatchingComponentList.componentList) {
+          for (let matchingComponent of replyMatchingComponentList.componentList.elements) {
+            this.addComponentSubListForTopic(matchingComponent.topic, [subscription]);
+          }
+        }
+      } catch (error) {
+        logError(error);
+        return error;
+      }
+    }
+
+    this.componentSubscriptionId++;
+    let token = {
+      id: this.componentSubscriptionId,
+      component: componentProfile,
+      type: 'component',
+      callback: callback,
+    };
+    subscription.tokens.push(token);
+
+    return token;
+  }
+
+  getComponentSubscription(componentProfile) {
+    for (let key of this.componentSubs.keys()) {
+      if (FilterUtils.deepEqual(key, componentProfile)) {
+        console.info('getComponentSubscription()');
+        console.info(this.componentSubs.get(key));
+        return this.componentSubs.get(key);
+      }
+    }
+  }
+
+  getMatchingComponentSubscriptions(componentProfile) {
+    let subs = [];
+    for (let key of this.componentSubs.keys()) {
+      if (FilterUtils.matches(key, componentProfile)) {
+        subs.push(this.componentSubs.get(key));
+      }
+    }
+
+    console.info('getMatchingComponentSubscriptions()');
+    console.info(subs);
+    return subs;
+  }
+
+  addComponentSubListForTopic(topic, matchingComponentSubs) {
+    console.info(`addComponentSubListForTopic() - "${topic}":`);
+    console.info(matchingComponentSubs);
+    let entry = this.mapTopics2ComponentSubs.get(topic);
+    if (!entry) {
+      this.mapTopics2ComponentSubs.set(topic, matchingComponentSubs);
+    } else {
+      for (let sub of matchingComponentSubs) {
+        if (!entry.includes(sub)) {
+          entry.push(sub);
+        }
+      }
+    }
+  }
+
+  /**
+   * Unsubscribe at topicdata and possibly at master node.
+   * @param {*} token
+   */
+  async unsubscribe(token) {
+    let result = this.topicDataBuffer.unsubscribe(token);
+
+    let subs = undefined;
+    if (token.type === SUBSCRIPTION_TYPES.TOPIC) {
+      subs = this.topicDataBuffer.getSubscriptionTokensForTopic(token.topic);
+    } else if (token.type === SUBSCRIPTION_TYPES.REGEX) {
+      subs = this.topicDataBuffer.getSubscriptionTokensForRegex(token.topic);
+    }
+
+    if (!subs || subs.length === 0) {
+      let message = {
+        topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
+        topicSubscription: {
+          clientId: this.id
+        }
+      };
+      if (token.type === SUBSCRIPTION_TYPES.TOPIC) {
+        message.topicSubscription.unsubscribeTopics = [token.topic];
+      } else if (token.type === SUBSCRIPTION_TYPES.REGEX) {
+        message.topicSubscription.unsubscribeTopicRegexp = [token.topic];
+      }
+
+      try {
+        let replySubscribe = await this.callService(message);
+        if (replySubscribe.error) {
+          return replySubscribe.error;
+        }
+      } catch (error) {
+        logError(error);
+        return error;
+      }
+    }
+
+    return result;
+  }
+
   publishRecord(record) {
     this.recordsToPublish.push(record);
   }
@@ -484,13 +545,12 @@ class ClientNodeWeb {
 
   setPublishIntervalMs(intervalMs) {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
-
     this.intervalPublishRecords = setInterval(() => this.flushRecordsToPublish(), intervalMs);
   }
 
-  publishRecordImmediately(topicDataRecord) {
+  publishRecordImmediately(record) {
     let buffer = this.translatorTopicData.createBufferFromPayload({
-      topicDataRecord: topicDataRecord
+      topicDataRecord: record
     });
     this.topicDataClient.send(buffer);
   }
@@ -500,39 +560,17 @@ class ClientNodeWeb {
     message.topicDataRecord && recordList.push(message.topicDataRecord);
 
     for (let record of recordList) {
-      let callbacks = this.topicDataCallbacks.get(record.topic);
-      if (!callbacks) {
-        this.topicDataRegexCallbacks.forEach((value) => {
-          let regex = value.regex;
-          if (regex.test(record.topic)) {
-            callbacks = value.callbacks;
+      this.topicDataBuffer.publish(record.topic, record);
+      let componentSubs = this.mapTopics2ComponentSubs.get(record.topic);
+      if (componentSubs && componentSubs.length > 0) {
+        for (let sub of componentSubs) {
+          for (let token of sub.tokens) {
+            token.callback(record);
           }
-        });
+        }
       }
-      callbacks &&
-        callbacks.forEach((cb) => {
-          cb(record[record.type], record.topic);
-        });
     }
   }
-}
-
-let subscriptionTokenID = -1;
-let generateSubscriptionToken = (topic, callback, subscriptionType) => {
-  let tokenID = ++subscriptionTokenID;
-
-  let token = {
-    id: tokenID,
-    topic: topic,
-    type: subscriptionType,
-    callback: callback
-  };
-  if (subscriptionType === SUBSCRIPTION_TYPES.REGEX) {
-    token.regex = new RegExp(topic);
-    token.regexTopicMatches = [];
-  }
-
-  return token;
 }
 
 export default ClientNodeWeb;

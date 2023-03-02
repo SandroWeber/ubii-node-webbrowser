@@ -24,7 +24,8 @@
   ],
   "browser": "src/index.js",
   "dependencies": {
-    "@tum-far/ubii-msg-formats": "0.16.3"
+    "@tum-far/ubii-msg-formats": "0.16.6",
+    "@tum-far/ubii-topic-data": "0.4.8"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "1.2.35",
