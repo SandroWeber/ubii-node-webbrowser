@@ -134,8 +134,6 @@ class ClientNodeWeb {
     this.setPublishIntervalMs(this.publishDelayMs);
     
     this.subTokenInfoNewDevices = await this.subscribeTopic('/info/device/new', (record) => {
-      console.info('callback for "/info/device/new"');
-      console.info(record.device);
       for (let newComponent of record.device.components) {
         let matchingSubs = this.getMatchingComponentSubscriptions(newComponent);
         this.addComponentSubListForTopic(newComponent.topic, matchingSubs);
@@ -397,7 +395,6 @@ class ClientNodeWeb {
    * @param {*} callback
    */
   async subscribeComponents(componentProfile, callback) {
-    console.info('subscribeComponents()');
     let subscription = this.getComponentSubscription(componentProfile);
     if (typeof subscription === 'undefined') {
       try {
@@ -461,14 +458,10 @@ class ClientNodeWeb {
       }
     }
 
-    console.info('getMatchingComponentSubscriptions()');
-    console.info(subs);
     return subs;
   }
 
   addComponentSubListForTopic(topic, matchingComponentSubs) {
-    console.info(`addComponentSubListForTopic() - "${topic}":`);
-    console.info(matchingComponentSubs);
     let entry = this.mapTopics2ComponentSubs.get(topic);
     if (!entry) {
       this.mapTopics2ComponentSubs.set(topic, matchingComponentSubs);
