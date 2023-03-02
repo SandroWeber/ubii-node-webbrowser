@@ -54,7 +54,11 @@ class UbiiClientService extends EventEmitter {
     this.connecting = true;
 
     console.info(
-      'UbiiClientService - connecting to services=' + this.urlServices + ' and topicdata=' + this.urlTopicData + ' ...'
+      'UbiiClientService - connecting to services=' +
+        this.urlServices +
+        ' and topicdata=' +
+        this.urlTopicData +
+        ' ...'
     );
 
     if (!this.client) {
@@ -206,7 +210,7 @@ class UbiiClientService extends EventEmitter {
   }
 
   async subscribeComponents(componentProfile, callback) {
-    return await this.client && this.client.subscribeComponents(componentProfile, callback);
+    return (await this.client) && this.client.subscribeComponents(componentProfile, callback);
   }
 
   async unsubscribe(token) {

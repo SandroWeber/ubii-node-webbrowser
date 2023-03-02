@@ -443,8 +443,6 @@ class ClientNodeWeb {
   getComponentSubscription(componentProfile) {
     for (let key of this.componentSubs.keys()) {
       if (FilterUtils.deepEqual(key, componentProfile)) {
-        console.info('getComponentSubscription()');
-        console.info(this.componentSubs.get(key));
         return this.componentSubs.get(key);
       }
     }
