@@ -16,7 +16,8 @@
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "lint": "vue-cli-service lint",
+    "doc": "./node_modules/.bin/jsdoc -d ./documentation src/ubiiNode/ubiiClientService.js"
   },
   "files": [
     "src/index.js",
@@ -37,6 +38,7 @@
     "babel-eslint": "^10.1.0",
     "eslint": "7.28.0",
     "eslint-plugin-vue": "7.11.1",
+    "jsdoc": "4.0.2",
     "npm": "7.17.0",
     "prettier": "2.5.1",
     "vue": "^2.6.14",
