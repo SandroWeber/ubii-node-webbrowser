@@ -15,10 +15,12 @@ const logWarning = (msg) => {
 }*/
 const logError = (msg) => {
   console.error(LOG_TAG + '\n' + msg);
-}
+};
 
 class ClientNodeWeb {
-  get id() { return this.clientSpecification.id; }
+  get id() {
+    return this.clientSpecification.id;
+  }
 
   constructor(name, urlServices, urlTopicData, publishDelayMs = 15) {
     // Properties:
@@ -85,7 +87,7 @@ class ClientNodeWeb {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     // unsubscribe all topics / regexes
     let topics = Array.from(this.topicDataBuffer.getAllTopics());
-    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map(token => token.topic));
+    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map((token) => token.topic));
     await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
@@ -311,6 +313,11 @@ class ClientNodeWeb {
    */
   async subscribeTopic(topic, callback) {
     let subscriptions = this.topicDataBuffer.getSubscriptionTokensForTopic(topic);
+
+    let token = this.topicDataBuffer.subscribeTopic(topic, (record) => {
+      callback(record);
+    });
+
     if (!subscriptions || subscriptions.length === 0) {
       let message = {
         topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
@@ -323,20 +330,16 @@ class ClientNodeWeb {
       try {
         let replySubscribe = await this.callService(message);
         if (replySubscribe.error) {
+          this.topicDataBuffer.unsubscribe(token);
           logError('server error during subscribe to "' + topic + '": ' + replySubscribe.error);
           return replySubscribe.error;
         }
       } catch (error) {
-        console.error(
-          'local error during subscribe to "' + topic + '": ' + error
-        );
+        this.topicDataBuffer.unsubscribe(token);
+        console.error('local error during subscribe to "' + topic + '": ' + error);
         return error;
       }
     }
-
-    let token = this.topicDataBuffer.subscribeTopic(topic, (record) => {
-      callback(record);
-    });
 
     return token;
   }
