@@ -17,10 +17,12 @@ const logWarning = (msg) => {
 }*/
 const logError = (msg) => {
   console.error(LOG_TAG + '\n' + msg);
-}
+};
 
 class ClientNodeWeb {
-  get id() { return this.clientSpecification.id; }
+  get id() {
+    return this.clientSpecification.id;
+  }
 
   constructor(name, urlServices, urlTopicData, publishDelayMs = 15) {
     // Properties:
@@ -92,7 +94,7 @@ class ClientNodeWeb {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     // unsubscribe all topics / regexes
     let topics = Array.from(this.topicDataBuffer.getAllTopics());
-    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map(token => token.topic));
+    let regexes = Array.from(this.topicDataBuffer.regexSubscriptions.map((token) => token.topic));
     await this.callService({
       topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
       topicSubscription: {
@@ -281,17 +283,10 @@ class ClientNodeWeb {
     return new Promise((resolve, reject) => {
       // VARIANT A: PROTOBUF
       /*let buffer = this.translatorServiceRequest.createBufferFromPayload(message);
-       console.info('### callService - request ###');
-       console.info(message);
-       console.info(buffer);
        this.serviceClient.send('/services', buffer).then(
        (reply) => {
        let buffer = new Buffer(reply);
        let message = this.translatorServiceReply.createMessageFromBuffer(buffer);
-       console.info('### callService - reply ###');
-       console.info(message);
-       console.info(buffer.length);
-       console.info(buffer);
  
        return resolve(message);
        },
@@ -325,7 +320,12 @@ class ClientNodeWeb {
    */
   async subscribeTopic(topic, callback) {
     let subscriptions = this.topicDataBuffer.getSubscriptionTokensForTopic(topic);
-    if (!subscriptions || subscriptions.length === 0) {
+    let subAtMasterNode = !subscriptions || subscriptions.length === 0;
+    let token = this.topicDataBuffer.subscribeTopic(topic, (record) => {
+      callback(record);
+    });
+
+    if (subAtMasterNode) {
       let message = {
         topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
         topicSubscription: {
@@ -337,20 +337,16 @@ class ClientNodeWeb {
       try {
         let replySubscribe = await this.callService(message);
         if (replySubscribe.error) {
+          this.topicDataBuffer.unsubscribe(token);
           logError('server error during subscribe to "' + topic + '": ' + replySubscribe.error);
           return replySubscribe.error;
         }
       } catch (error) {
-        console.error(
-          'local error during subscribe to "' + topic + '": ' + error
-        );
+        this.topicDataBuffer.unsubscribe(token);
+        logError('local error during subscribe to "' + topic + '": ' + error);
         return error;
       }
     }
-
-    let token = this.topicDataBuffer.subscribeTopic(topic, (record) => {
-      callback(record);
-    });
 
     return token;
   }
@@ -362,7 +358,12 @@ class ClientNodeWeb {
    */
   async subscribeRegex(regexString, callback) {
     let subscriptions = this.topicDataBuffer.getSubscriptionTokensForRegex(regexString);
-    if (!subscriptions || subscriptions.length === 0) {
+    let subAtMasterNode = !subscriptions || subscriptions.length === 0;
+    let token = this.topicDataBuffer.subscribeRegex(regexString, (record) => {
+      callback(record);
+    });
+
+    if (subAtMasterNode) {
       let message = {
         topic: DEFAULT_TOPICS.SERVICES.TOPIC_SUBSCRIPTION,
         topicSubscription: {
@@ -374,17 +375,16 @@ class ClientNodeWeb {
       try {
         let replySubscribe = await this.callService(message);
         if (replySubscribe.error) {
+          this.topicDataBuffer.unsubscribe(token);
+          logError(replySubscribe.error);
           return replySubscribe.error;
         }
       } catch (error) {
+        this.topicDataBuffer.unsubscribe(token);
         logError(error);
         return error;
       }
     }
-
-    let token = this.topicDataBuffer.subscribeRegex(regexString, (record) => {
-      callback(record);
-    });
 
     return token;
   }
@@ -500,9 +500,10 @@ class ClientNodeWeb {
       }
 
       try {
-        let replySubscribe = await this.callService(message);
-        if (replySubscribe.error) {
-          return replySubscribe.error;
+        let replyUnsubscribe = await this.callService(message);
+        if (replyUnsubscribe.error) {
+          logError(replyUnsubscribe.error);
+          return replyUnsubscribe.error;
         }
       } catch (error) {
         logError(error);
