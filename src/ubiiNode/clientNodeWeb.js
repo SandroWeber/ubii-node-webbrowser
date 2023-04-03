@@ -19,6 +19,9 @@ const logError = (msg) => {
   console.error(LOG_TAG + '\n' + msg);
 };
 
+/**
+ * A Ubi-Interact client node.
+ */
 class ClientNodeWeb {
   get id() {
     return this.clientSpecification.id;
@@ -275,9 +278,11 @@ class ClientNodeWeb {
     );
   }
 
+
   /**
-   * Call a service specified by the topic with a message and callback.
-   * @param {Object} message An object representing the protobuf message to be sent
+   * Make a service call.
+   * @param {ubii.services.ServiceRequest} serviceRequest Protobuf of a service request. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceRequest.proto}
+   * @returns A Ubi-Interact ServiceReply. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceReply.proto}
    */
   callService(message) {
     return new Promise((resolve, reject) => {
@@ -314,9 +319,10 @@ class ClientNodeWeb {
   }
 
   /**
-   * Subscribe to the specified topic.
-   * @param {*} topic
-   * @param {*} callback
+   * Subscribe to a topic, providing a callback function to be called upon receiving notifications.
+   * @param {String} topic The topic to subscribe to.
+   * @param {Function} callback The function to be called upon receiving messages for the specified topic.
+   * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeTopic(topic, callback) {
     let subscriptions = this.topicDataBuffer.getSubscriptionTokensForTopic(topic);
@@ -352,9 +358,10 @@ class ClientNodeWeb {
   }
 
   /**
-   * Subscribe to the specified regex.
-   * @param {*} regexString
-   * @param {*} callback
+   * Subscribe to a regular expression, providing a callback function to be called upon receiving notifications.
+   * @param {String} regexString The regular expression to subscribe to. Used to match against existing and future topics.
+   * @param {Function} callback The function to be called upon receiving messages for the specified regular expression.
+   * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeRegex(regexString, callback) {
     let subscriptions = this.topicDataBuffer.getSubscriptionTokensForRegex(regexString);
@@ -390,9 +397,10 @@ class ClientNodeWeb {
   }
 
   /**
-   * Subscribe to the specified component(s).
-   * @param {*} regexString
-   * @param {*} callback
+   * Subscribe to a component profile, providing a callback function to be called upon receiving notifications.
+   * @param {ubii.devices.Component} componentProfile The Component(s) to subscribe to. Used to match against existing and future Components. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/devices/component.proto}
+   * @param {Function} callback The function to be called upon receiving messages for the specified Component profile.
+   * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeComponents(componentProfile, callback) {
     let subscription = this.getComponentSubscription(componentProfile);
@@ -473,7 +481,7 @@ class ClientNodeWeb {
   }
 
   /**
-   * Unsubscribe at topicdata and possibly at master node.
+   * Unsubscribe at local topic data buffer and at master node if no other subscriptions to the same expression are left.
    * @param {*} token
    */
   async unsubscribe(token) {
@@ -514,12 +522,20 @@ class ClientNodeWeb {
     return result;
   }
 
-  publishRecord(record) {
-    this.recordsToPublish.push(record);
+  /**
+   * Add a TopicDataRecord to the publishing queue.
+   * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
+   */
+  publishRecord(topicDataRecord) {
+    this.recordsToPublish.push(topicDataRecord);
   }
 
-  publishRecordList(recordList) {
-    this.recordsToPublish.push(...recordList);
+  /**
+   * Add a list of TopicDataRecords to the publishing queue.
+   * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
+   */
+  publishRecordList(topicDataRecordList) {
+    this.recordsToPublish.push(...topicDataRecordList);
   }
 
   flushRecordsToPublish() {
@@ -535,14 +551,22 @@ class ClientNodeWeb {
     this.recordsToPublish = [];
   }
 
+  /**
+   * Set the interval for regular publishing of TopicDataRecords.
+   * @param {Number} intervalMs The interval in milliseconds. 
+   */
   setPublishIntervalMs(intervalMs) {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
     this.intervalPublishRecords = setInterval(() => this.flushRecordsToPublish(), intervalMs);
   }
 
-  publishRecordImmediately(record) {
+  /**
+   * Publish a TopicDataRecord without delay using an individual TopicData message instead of queueing it. Might lead to messaging overhead.
+   * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
+   */
+  publishRecordImmediately(topicDataRecord) {
     let buffer = this.translatorTopicData.createBufferFromPayload({
-      topicDataRecord: record
+      topicDataRecord: topicDataRecord
     });
     this.topicDataClient.send(buffer);
   }

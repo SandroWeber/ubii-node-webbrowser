@@ -3,7 +3,7 @@
     "allowUnknownTags": false
   },
   "source": {
-    "include": "./src/ubiiNode/ubiiClientService.js",
+    "include": ["./src/ubiiNode/ubiiClientService.js"],
     "includePattern": "\\.js$",
     "excludePattern": "(node_modules/|docs)"
   },

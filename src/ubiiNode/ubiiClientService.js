@@ -142,7 +142,7 @@ class UbiiClientService extends EventEmitter {
 
 
   /**
-   * Use to receive a Promise that resolves once connection is established.
+   * Use to receive a Promise that resolves as soon as connection is established.
    * @returns The Promise.
    */
   waitForConnection() {
@@ -200,9 +200,8 @@ class UbiiClientService extends EventEmitter {
 
   /**
    * Make a service call.
-   * @param {ubii.services.ServiceRequest} serviceRequest The Protobuf of a service request. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceRequest.proto}
-   * @returns The reply to the request. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceReply.proto}
-   * 
+   * @param {ubii.services.ServiceRequest} serviceRequest Protobuf of a service request. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceRequest.proto}
+   * @returns A Ubi-Interact ServiceReply. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceReply.proto}
    */
   async callService(serviceRequest) {
     return this.client.callService(serviceRequest);
@@ -271,7 +270,7 @@ class UbiiClientService extends EventEmitter {
   }
 
   /**
-   * Publish a TopicDataRecord without delay using an individual TopicData message instead of queueing it into a bundle of TopicDataRecords. Might lead to message overhead.
+   * Publish a TopicDataRecord without delay using an individual TopicData message instead of queueing it. Might lead to messaging overhead.
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordImmediately(topicDataRecord) {
