@@ -5,7 +5,7 @@ import WebsocketClient from './websocketClient';
 import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
 import { RuntimeTopicData, SUBSCRIPTION_TYPES } from '@tum-far/ubii-topic-data';
 
-import FilterUtils from '../filterUtils';
+import FilterUtils from '../utils/filterUtils';
 
 const LOG_TAG = 'UbiiNode';
 

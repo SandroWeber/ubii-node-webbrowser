@@ -21,7 +21,8 @@
   },
   "files": [
     "src/index.js",
-    "src/ubiiNode/"
+    "src/ubiiNode/",
+    "src/utils/"
   ],
   "browser": "src/index.js",
   "dependencies": {
