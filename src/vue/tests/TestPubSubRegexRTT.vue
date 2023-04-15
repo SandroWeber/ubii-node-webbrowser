@@ -105,19 +105,19 @@ export default {
       this.prepareTest();
       await this.ubiiSetup();
 
-      await this.ubiiService.subscribeRegex(this.testData.topicRegex, this.rttReceivePackage);
+      this.subToken = await this.ubiiService.subscribeRegex(this.testData.topicRegex, this.rttReceivePackage);
       this.rttSendPackage();
     },
     stopTest: function () {
       if (this.testData && this.testData.avgRTT) {
         this.testData.status = this.testData.avgRTT.toString() + 'ms';
-        this.ubiiService.unsubscribeRegex(this.testData.topicRegex, this.rttReceivePackage);
+        this.ubiiService.unsubscribe(this.subToken);
       }
     },
     rttSendPackage: function () {
       let topic = this.getRandomTopic();
       this.testData.tSent = Date.now();
-      topic && this.ubiiService.publishRecord({
+      topic && this.ubiiService.publishRecordImmediately({
         topic: topic,
         double: 1,
       });
