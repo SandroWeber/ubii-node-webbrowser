@@ -328,7 +328,7 @@ export default {
       }
 
       // subscribe to the device topics so we are notified when new data arrives on the topic
-      await UbiiClientService.instance.subscribeTopic(
+      this.subTokenServerPointer = await UbiiClientService.instance.subscribeTopic(
         this.ubiiComponentServerPointer.topic,
         // a callback to be called when new data on this topic arrives
         this.subscriptionServerPointerPosition
@@ -350,10 +350,7 @@ export default {
       this.exampleStarted = false;
 
       // unsubscribe and stop session
-      await UbiiClientService.instance.unsubscribeTopic(
-        this.ubiiComponentServerPointer.topic,
-        this.subscriptionServerPointerPosition
-      );
+      await UbiiClientService.instance.unsubscribe(this.subTokenServerPointer);
       await UbiiClientService.instance.callService({
         topic: DEFAULT_TOPICS.SERVICES.SESSION_RUNTIME_STOP,
         session: this.ubiiSession,
@@ -364,15 +361,15 @@ export default {
       }
     },
     /* publishing and subscribing */
-    subscriptionServerPointerPosition: function (vec2) {
+    subscriptionServerPointerPosition: function (record) {
       // when we get a normalized server pointer position, we calculate back to absolute (x,y) within the
       // mouse area and set our red square indicator
       let boundingRect = document
         .getElementById("mouse-pointer-area")
         .getBoundingClientRect();
       this.$data.serverMousePosition = {
-        x: vec2.x * boundingRect.width,
-        y: vec2.y * boundingRect.height,
+        x: record.vector2.x * boundingRect.width,
+        y: record.vector2.y * boundingRect.height,
       };
     },
     publishClientPointerPosition: function (vec2) {
