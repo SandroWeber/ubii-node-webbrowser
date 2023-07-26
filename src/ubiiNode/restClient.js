@@ -1,26 +1,20 @@
 /* eslint-disable no-console */
-import UbiiClientService from './ubiiClientService';
 
 class RESTClient {
   /**
    * Communication endpoint implementing REST pattern.
-   * @param {*} host Host to connect to.
-   * @param {*} port Port to connect to.
+   * @param {string} url URL to connect to.
    */
-  constructor(host = 'localhost', port = 5555) {
-    this.host = host;
-    this.port = port;
+  constructor(url) {
+    this.url = url;
   }
 
   //TODO: make async/await !
-  send(route, message) {
-    let url = UbiiClientService.instance.useHTTPS ? 'https://' : 'http://';
-    url += this.host + ':' + this.port + route;
-
+  send(message) {
     return new Promise((resolve, reject) => {
       let body = JSON.stringify(message);
 
-      const request = new Request(url, {
+      const request = new Request(this.url, {
         method: 'POST',
         mode: 'cors',
         headers: {

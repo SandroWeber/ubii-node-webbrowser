@@ -1,4 +1,51 @@
-/* eslint-disable no-console */
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>ubiiClientService.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="UbiiClientService.html">UbiiClientService</a><ul class='methods'><li data-type='method'><a href="UbiiClientService.html#callService">callService</a></li><li data-type='method'><a href="UbiiClientService.html#connect">connect</a></li><li data-type='method'><a href="UbiiClientService.html#deregisterDevice">deregisterDevice</a></li><li data-type='method'><a href="UbiiClientService.html#disconnect">disconnect</a></li><li data-type='method'><a href="UbiiClientService.html#generateTimestamp">generateTimestamp</a></li><li data-type='method'><a href="UbiiClientService.html#getClientID">getClientID</a></li><li data-type='method'><a href="UbiiClientService.html#getPublishIntervalMs">getPublishIntervalMs</a></li><li data-type='method'><a href="UbiiClientService.html#getUUIDv4Regex">getUUIDv4Regex</a></li><li data-type='method'><a href="UbiiClientService.html#isConnected">isConnected</a></li><li data-type='method'><a href="UbiiClientService.html#onDisconnect">onDisconnect</a></li><li data-type='method'><a href="UbiiClientService.html#publishRecord">publishRecord</a></li><li data-type='method'><a href="UbiiClientService.html#publishRecordImmediately">publishRecordImmediately</a></li><li data-type='method'><a href="UbiiClientService.html#publishRecordList">publishRecordList</a></li><li data-type='method'><a href="UbiiClientService.html#reconnect">reconnect</a></li><li data-type='method'><a href="UbiiClientService.html#registerDevice">registerDevice</a></li><li data-type='method'><a href="UbiiClientService.html#registerSession">registerSession</a></li><li data-type='method'><a href="UbiiClientService.html#setHTTPS">setHTTPS</a></li><li data-type='method'><a href="UbiiClientService.html#setName">setName</a></li><li data-type='method'><a href="UbiiClientService.html#setPublishIntervalMs">setPublishIntervalMs</a></li><li data-type='method'><a href="UbiiClientService.html#subscribeComponents">subscribeComponents</a></li><li data-type='method'><a href="UbiiClientService.html#subscribeRegex">subscribeRegex</a></li><li data-type='method'><a href="UbiiClientService.html#subscribeTopic">subscribeTopic</a></li><li data-type='method'><a href="UbiiClientService.html#unsubscribe">unsubscribe</a></li><li data-type='method'><a href="UbiiClientService.html#waitForConnection">waitForConnection</a></li></ul></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">ubiiClientService.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/* eslint-disable no-console */
 
 import EventEmitter from 'events';
 
@@ -65,7 +112,7 @@ class UbiiClientService extends EventEmitter {
    */
   async connect(urlServices, urlTopicData) {
     let changedAddress = urlServices !== this.urlServices || urlTopicData !== this.urlTopicData;
-    if (!changedAddress && (this.isConnected() || this.connecting)) {
+    if (!changedAddress &amp;&amp; (this.isConnected() || this.connecting)) {
       return this.waitForConnection();
     }
 
@@ -85,30 +132,26 @@ class UbiiClientService extends EventEmitter {
       this.client = new ClientNodeWeb(this.name, this.urlServices, this.urlTopicData);
     }
 
-    try {
-      await this.client.initialize();
-    } catch (error) {
-      console.error('UbiiClientService.client.initialize() failed:\n' + error.toString());
-    }
-    
-    if (this.client.isInitialized()) {
-      console.info(
-        'UbiiClientService - client initialized with ID:\n' + this.client.clientSpecification.id
-      );
+    return this.client.initialize().then(
+      () => {
+        if (this.client.isInitialized()) {
+          console.info(
+            'UbiiClientService - client connected with ID:\n' + this.client.clientSpecification.id
+          );
+          this.connecting = false;
 
-      this.client.topicDataClient.websocket.onclose = () => {
-        console.warn('Ubi-Interact topic data websocket connection has closed!');
-        this.emit(UbiiClientService.EVENTS.DISCONNECT);
-      };
-    }
+          this.client.topicDataClient.websocket.onclose = () => {
+            console.warn('Ubi-Interact topic data websocket connection has closed!');
+            this.emit(UbiiClientService.EVENTS.DISCONNECT);
+          };
 
-    try {
-      await this.waitForConnection();
-      this.connecting = false;
-      this.emit(UbiiClientService.EVENTS.CONNECT);
-    } catch {
-      console.error('UbiiClientService - failed to connect');
-    }
+          this.emit(UbiiClientService.EVENTS.CONNECT);
+        }
+      },
+      (error) => {
+        console.info('UbiiClientService.client.initialize() failed:\n' + error.toString());
+      }
+    );
   }
 
   /**
@@ -161,7 +204,7 @@ class UbiiClientService extends EventEmitter {
           return;
         }
 
-        if (this.client && this.client.isConnected()) {
+        if (this.client &amp;&amp; this.client.isConnected()) {
           resolve('UbiiClientService is connected.');
           return;
         } else {
@@ -179,7 +222,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A boolean.
    */
   isConnected() {
-    return this.client && this.client.isConnected();
+    return this.client &amp;&amp; this.client.isConnected();
   }
 
   /**
@@ -195,7 +238,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A string, or undefined.
    */
   getClientID() {
-    if (this.client && this.client.isInitialized()) {
+    if (this.client &amp;&amp; this.client.isInitialized()) {
       return this.client.clientSpecification.id;
     } else {
       return undefined;
@@ -236,7 +279,7 @@ class UbiiClientService extends EventEmitter {
    * @returns The master node reply for the requested registration.
    */
   async registerSession(sessionSpecs) {
-    if (this.client && this.client.isInitialized()) {
+    if (this.client &amp;&amp; this.client.isInitialized()) {
       return this.client.registerSession(sessionSpecs);
     }
   }
@@ -246,7 +289,7 @@ class UbiiClientService extends EventEmitter {
    * @returns Interval in milliseconds.
    */
   getPublishIntervalMs() {
-    return this.client && this.client.publishDelayMs;
+    return this.client &amp;&amp; this.client.publishDelayMs;
   }
 
   /**
@@ -254,7 +297,7 @@ class UbiiClientService extends EventEmitter {
    * @param {Number} intervalMs Interval in milliseconds.
    */
   setPublishIntervalMs(intervalMs) {
-    this.client && this.client.setPublishIntervalMs(intervalMs);
+    this.client &amp;&amp; this.client.setPublishIntervalMs(intervalMs);
   }
 
   /**
@@ -262,7 +305,7 @@ class UbiiClientService extends EventEmitter {
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecord(topicDataRecord) {
-    this.client && this.client.publishRecord(topicDataRecord);
+    this.client &amp;&amp; this.client.publishRecord(topicDataRecord);
   }
 
   /**
@@ -270,7 +313,7 @@ class UbiiClientService extends EventEmitter {
    * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordList(topicDataRecordList) {
-    this.client && this.client.publishRecordList(topicDataRecordList);
+    this.client &amp;&amp; this.client.publishRecordList(topicDataRecordList);
   }
 
   /**
@@ -278,7 +321,7 @@ class UbiiClientService extends EventEmitter {
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordImmediately(topicDataRecord) {
-    this.client && this.client.publishRecordImmediately(topicDataRecord);
+    this.client &amp;&amp; this.client.publishRecordImmediately(topicDataRecord);
   }
 
   /**
@@ -288,7 +331,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeTopic(topic, callback) {
-    return this.client && this.client.subscribeTopic(topic, callback);
+    return this.client &amp;&amp; this.client.subscribeTopic(topic, callback);
   }
 
   /**
@@ -298,7 +341,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A subscription token that should be used to unsubscribe.
    */
   subscribeRegex(regex, callback) {
-    return this.client && this.client.subscribeRegex(regex, callback);
+    return this.client &amp;&amp; this.client.subscribeRegex(regex, callback);
   }
 
   /**
@@ -308,7 +351,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeComponents(componentProfile, callback) {
-    return (await this.client) && this.client.subscribeComponents(componentProfile, callback);
+    return (await this.client) &amp;&amp; this.client.subscribeComponents(componentProfile, callback);
   }
 
   /**
@@ -346,3 +389,28 @@ UbiiClientService.EVENTS = Object.freeze({
 });
 
 export default UbiiClientService;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.2</a> on Mon Apr 03 2023 10:33:15 GMT+0200 (Central European Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>
