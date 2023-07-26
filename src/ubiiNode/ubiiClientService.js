@@ -186,7 +186,7 @@ class UbiiClientService extends EventEmitter {
    * Add a callback function to be executed after disconnecting.
    * @param {Function} callback A callback function.
    */
-  onDisconnect(callback) {
+  addOnDisconnectCallback(callback) {
     this.onDisconnectCallbacks.push(callback);
   }
 

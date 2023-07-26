@@ -125,7 +125,9 @@ class ClientNodeWeb {
   }
 
   async initializeTopicDataClient() {
-    this.topicDataClient = new WebsocketClient(this.id, this.urlTopicData);
+    this.topicDataClient = new WebsocketClient(this.id, this.urlTopicData, true, (event) => {
+      this._onWebSocketDisconnect(event);
+    });
     this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
         let arrayBuffer = messageBuffer.data;
@@ -137,7 +139,7 @@ class ClientNodeWeb {
     });
 
     this.setPublishIntervalMs(this.publishDelayMs);
-    
+
     this.subTokenInfoNewDevices = await this.subscribeTopic('/info/device/new', (record) => {
       for (let newComponent of record.device.components) {
         let matchingSubs = this.getMatchingComponentSubscriptions(newComponent);
@@ -156,10 +158,14 @@ class ClientNodeWeb {
   isConnected() {
     return (
       this.serviceClient &&
-      this.topicDataClient &&
+      this.isTopicDataConnected()
+    );
+  }
+
+  isTopicDataConnected() {
+    return this.topicDataClient &&
       this.topicDataClient.websocket &&
       this.topicDataClient.websocket.readyState === WebSocket.OPEN
-    );
   }
 
   async getServerConfig() {
@@ -414,7 +420,7 @@ class ClientNodeWeb {
           }
         });
         if (replySubscribe.error) return replySubscribe.error;
-        
+
         subscription = {
           tokens: []
         };
@@ -585,6 +591,21 @@ class ClientNodeWeb {
           }
         }
       }
+    }
+  }
+
+  _onWebSocketDisconnect(event) {
+    if (!event.wasClean) {
+      let reconnectAttempts = 0;
+      let reconnect = async () => {
+        reconnectAttempts++;
+        await this.initializeTopicDataClient();
+        if (!this.isTopicDataConnected()) {
+          console.warn(LOG_TAG + ' - failed to reconnect TopicData client');
+          setTimeout(reconnect, reconnectAttempts * 1000);
+        }
+      };
+      
     }
   }
 }
