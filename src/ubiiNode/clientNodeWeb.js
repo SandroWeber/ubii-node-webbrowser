@@ -202,7 +202,11 @@ class ClientNodeWeb {
     }
 
     return this.callService(message).then((reply) => {
-      if (reply.client) {
+      if (reply.error) {
+        console.error(LOG_TAG + " - client registration error: " + reply.error);
+        return;
+      }
+      else if (reply.client) {
         this.clientSpecification = reply.client;
 
         return reply.client;
