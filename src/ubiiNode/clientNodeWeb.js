@@ -52,7 +52,6 @@ class ClientNodeWeb {
     this.topicDataCallbacks = new Map();
     this.topicDataRegexCallbacks = new Map();
 
-
     this.componentSubs = new Map();
     this.mapTopics2ComponentSubs = new Map();
     this.componentSubscriptionId = 0;
@@ -61,7 +60,17 @@ class ClientNodeWeb {
   /**
    * Initialize this client.
    */
-  async initialize() {
+  async connect(urlServices, urlTopicData) {
+    this.urlServices = urlServices ? urlServices : this.urlServices;
+    this.urlTopicData = urlTopicData ? urlTopicData : this.urlTopicData;
+    console.info(
+      'UbiiClientNode - connecting to services=' +
+        this.urlServices +
+        ' and topicdata=' +
+        this.urlTopicData +
+        ' ...'
+    );
+
     return new Promise((resolve, reject) => {
       // STEP 1: open a request/reply-style service connection to server
       this.serviceClient = new RESTClient(this.urlServices);
@@ -137,7 +146,7 @@ class ClientNodeWeb {
     });
 
     this.setPublishIntervalMs(this.publishDelayMs);
-    
+
     this.subTokenInfoNewDevices = await this.subscribeTopic('/info/device/new', (record) => {
       for (let newComponent of record.device.components) {
         let matchingSubs = this.getMatchingComponentSubscriptions(newComponent);
@@ -278,7 +287,6 @@ class ClientNodeWeb {
     );
   }
 
-
   /**
    * Make a service call.
    * @param {ubii.services.ServiceRequest} serviceRequest Protobuf of a service request. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceRequest.proto}
@@ -414,7 +422,7 @@ class ClientNodeWeb {
           }
         });
         if (replySubscribe.error) return replySubscribe.error;
-        
+
         subscription = {
           tokens: []
         };
@@ -441,7 +449,7 @@ class ClientNodeWeb {
       id: this.componentSubscriptionId,
       component: componentProfile,
       type: 'component',
-      callback: callback,
+      callback: callback
     };
     subscription.tokens.push(token);
 
@@ -535,7 +543,14 @@ class ClientNodeWeb {
    * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordList(topicDataRecordList) {
-    this.recordsToPublish.push(...topicDataRecordList);
+    for (let record of topicDataRecordList) {
+      if (!record.topic) {
+        logError('record has no topic!');
+        logError(record);
+      } else {
+        this.recordsToPublish.push(record);
+      }
+    }
   }
 
   flushRecordsToPublish() {
@@ -553,7 +568,7 @@ class ClientNodeWeb {
 
   /**
    * Set the interval for regular publishing of TopicDataRecords.
-   * @param {Number} intervalMs The interval in milliseconds. 
+   * @param {Number} intervalMs The interval in milliseconds.
    */
   setPublishIntervalMs(intervalMs) {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);
