@@ -548,14 +548,14 @@ class ClientNodeWeb {
    * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordList(topicDataRecordList) {
-    topicDataRecordList.forEach(record => {
+    topicDataRecordList.forEach((record) => {
       if (!record.topic) {
         logError('record has no topic!');
         logError(record);
       } else {
         this.recordsToPublish.push(record);
       }
-    }
+    });
   }
 
   flushRecordsToPublish() {
