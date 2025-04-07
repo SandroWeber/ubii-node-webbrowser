@@ -23,14 +23,13 @@ class UbiiClientService extends EventEmitter {
 
     this.name = 'ubii-node-webbrowser';
 
-    this.client = undefined;
+    this.ubiiNode = undefined;
     this.connecting = false;
 
     this.onDisconnectCallbacks = [];
-    this.useHTTPS = true;
   }
 
-  /** 
+  /**
    * Return the singleton instance of the client node.
    */
   static get instance() {
@@ -41,20 +40,12 @@ class UbiiClientService extends EventEmitter {
     return _instance;
   }
 
-  /** 
+  /**
    * Set a name to use for the client node.
    * @param {string} name The name.
    */
   setName(name) {
     this.name = name;
-  }
-
-  /**
-   * Set whether to use HTTPS or not when trying to connect to master node.
-   * @param {boolean} bool 
-   */
-  setHTTPS(bool) {
-    this.useHTTPS = bool;
   }
 
   /**
@@ -73,38 +64,28 @@ class UbiiClientService extends EventEmitter {
     this.urlTopicData = urlTopicData;
     this.connecting = true;
 
-    console.info(
-      'UbiiClientService - connecting to services=' +
-        this.urlServices +
-        ' and topicdata=' +
-        this.urlTopicData +
-        ' ...'
-    );
-
-    if (!this.client) {
-      this.client = new ClientNodeWeb(this.name, this.urlServices, this.urlTopicData);
+    if (!this.ubiiNode) {
+      this.ubiiNode = new ClientNodeWeb(this.name, this.urlServices, this.urlTopicData);
     }
 
-    return this.client.initialize().then(
-      () => {
-        if (this.client.isInitialized()) {
-          console.info(
-            'UbiiClientService - client connected with ID:\n' + this.client.clientSpecification.id
-          );
-          this.connecting = false;
+    try {
+      await this.ubiiNode.connect();
+      if (this.ubiiNode.isInitialized()) {
+        console.info(
+          'UbiiClientService - client connected with ID:\n' + this.ubiiNode.clientSpecification.id
+        );
+        this.connecting = false;
 
-          this.client.topicDataClient.websocket.onclose = () => {
-            console.warn('Ubi-Interact topic data websocket connection has closed!');
-            this.emit(UbiiClientService.EVENTS.DISCONNECT);
-          };
+        this.ubiiNode.topicDataClient.websocket.onclose = () => {
+          console.warn('Ubi-Interact topic data websocket connection has closed!');
+          this.emit(UbiiClientService.EVENTS.DISCONNECT);
+        };
 
-          this.emit(UbiiClientService.EVENTS.CONNECT);
-        }
-      },
-      (error) => {
-        console.info('UbiiClientService.client.initialize() failed:\n' + error.toString());
+        this.emit(UbiiClientService.EVENTS.CONNECT);
       }
-    );
+    } catch (error) {
+      console.info('UbiiClientService.client.initialize() failed:\n' + error.toString());
+    }
   }
 
   /**
@@ -118,16 +99,16 @@ class UbiiClientService extends EventEmitter {
       return Promise.resolve();
     }
 
-    let id = this.client.clientSpecification.id;
+    let id = this.ubiiNode.clientSpecification.id;
 
     this.emit(UbiiClientService.EVENTS.DISCONNECT);
     this.onDisconnectCallbacks.forEach((callback) => {
       callback();
     });
 
-    return this.client.deinitialize().then(() => {
+    return this.ubiiNode.deinitialize().then(() => {
       this.connecting = false;
-      this.client = undefined;
+      this.ubiiNode = undefined;
       console.info('client disconnected with ID: ' + id);
     });
   }
@@ -137,9 +118,8 @@ class UbiiClientService extends EventEmitter {
    */
   async reconnect() {
     console.info('UbiiClientService - reconnecting ...');
-    await this.client.reinitialize();
+    await this.ubiiNode.reinitialize();
   }
-
 
   /**
    * Use to receive a Promise that resolves as soon as connection is established.
@@ -157,7 +137,7 @@ class UbiiClientService extends EventEmitter {
           return;
         }
 
-        if (this.client && this.client.isConnected()) {
+        if (this.ubiiNode && this.ubiiNode.isConnected()) {
           resolve('UbiiClientService is connected.');
           return;
         } else {
@@ -175,7 +155,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A boolean.
    */
   isConnected() {
-    return this.client && this.client.isConnected();
+    return this.ubiiNode && this.ubiiNode.isConnected();
   }
 
   /**
@@ -191,8 +171,8 @@ class UbiiClientService extends EventEmitter {
    * @returns A string, or undefined.
    */
   getClientID() {
-    if (this.client && this.client.isInitialized()) {
-      return this.client.clientSpecification.id;
+    if (this.ubiiNode && this.ubiiNode.isInitialized()) {
+      return this.ubiiNode.clientSpecification.id;
     } else {
       return undefined;
     }
@@ -204,7 +184,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A Ubi-Interact ServiceReply. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceReply.proto}
    */
   async callService(serviceRequest) {
-    return this.client.callService(serviceRequest);
+    return this.ubiiNode.callService(serviceRequest);
   }
 
   /**
@@ -213,8 +193,8 @@ class UbiiClientService extends EventEmitter {
    * @returns The master node reply for the requested registration.
    */
   async registerDevice(deviceSpecs) {
-    deviceSpecs.clientId = this.client.clientSpecification.id;
-    return this.client.registerDevice(deviceSpecs);
+    deviceSpecs.clientId = this.ubiiNode.clientSpecification.id;
+    return this.ubiiNode.registerDevice(deviceSpecs);
   }
 
   /**
@@ -223,7 +203,7 @@ class UbiiClientService extends EventEmitter {
    * @returns The master node reply for the requested deregistration.
    */
   async deregisterDevice(deviceSpecs) {
-    return this.client.deregisterDevice(deviceSpecs);
+    return this.ubiiNode.deregisterDevice(deviceSpecs);
   }
 
   /**
@@ -232,8 +212,8 @@ class UbiiClientService extends EventEmitter {
    * @returns The master node reply for the requested registration.
    */
   async registerSession(sessionSpecs) {
-    if (this.client && this.client.isInitialized()) {
-      return this.client.registerSession(sessionSpecs);
+    if (this.ubiiNode && this.ubiiNode.isInitialized()) {
+      return this.ubiiNode.registerSession(sessionSpecs);
     }
   }
 
@@ -242,7 +222,7 @@ class UbiiClientService extends EventEmitter {
    * @returns Interval in milliseconds.
    */
   getPublishIntervalMs() {
-    return this.client && this.client.publishDelayMs;
+    return this.ubiiNode && this.ubiiNode.publishDelayMs;
   }
 
   /**
@@ -250,7 +230,7 @@ class UbiiClientService extends EventEmitter {
    * @param {Number} intervalMs Interval in milliseconds.
    */
   setPublishIntervalMs(intervalMs) {
-    this.client && this.client.setPublishIntervalMs(intervalMs);
+    this.ubiiNode && this.ubiiNode.setPublishIntervalMs(intervalMs);
   }
 
   /**
@@ -258,7 +238,7 @@ class UbiiClientService extends EventEmitter {
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecord(topicDataRecord) {
-    this.client && this.client.publishRecord(topicDataRecord);
+    this.ubiiNode && this.ubiiNode.publishRecord(topicDataRecord);
   }
 
   /**
@@ -266,7 +246,7 @@ class UbiiClientService extends EventEmitter {
    * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordList(topicDataRecordList) {
-    this.client && this.client.publishRecordList(topicDataRecordList);
+    this.ubiiNode && this.ubiiNode.publishRecordList(topicDataRecordList);
   }
 
   /**
@@ -274,7 +254,7 @@ class UbiiClientService extends EventEmitter {
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordImmediately(topicDataRecord) {
-    this.client && this.client.publishRecordImmediately(topicDataRecord);
+    this.ubiiNode && this.ubiiNode.publishRecordImmediately(topicDataRecord);
   }
 
   /**
@@ -284,7 +264,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeTopic(topic, callback) {
-    return this.client && this.client.subscribeTopic(topic, callback);
+    return this.ubiiNode && this.ubiiNode.subscribeTopic(topic, callback);
   }
 
   /**
@@ -294,7 +274,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A subscription token that should be used to unsubscribe.
    */
   subscribeRegex(regex, callback) {
-    return this.client && this.client.subscribeRegex(regex, callback);
+    return this.ubiiNode && this.ubiiNode.subscribeRegex(regex, callback);
   }
 
   /**
@@ -304,7 +284,7 @@ class UbiiClientService extends EventEmitter {
    * @returns A subscription token that should be used to unsubscribe.
    */
   async subscribeComponents(componentProfile, callback) {
-    return (await this.client) && this.client.subscribeComponents(componentProfile, callback);
+    return (await this.ubiiNode) && this.ubiiNode.subscribeComponents(componentProfile, callback);
   }
 
   /**
@@ -313,7 +293,7 @@ class UbiiClientService extends EventEmitter {
    * @returns The master node reply.
    */
   async unsubscribe(token) {
-    return await this.client.unsubscribe(token);
+    return await this.ubiiNode.unsubscribe(token);
   }
 
   /**

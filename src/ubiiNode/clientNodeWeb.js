@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 
-import RESTClient from './restClient';
-import WebsocketClient from './websocketClient';
+import ServiceConnectionHttp from './serviceConnectionHttp';
+import TopicDataConnectionWebsocket from './topicDataConnectionWebsocket';
 import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
 import { RuntimeTopicData, SUBSCRIPTION_TYPES } from '@tum-far/ubii-topic-data';
 
@@ -52,7 +52,6 @@ class ClientNodeWeb {
     this.topicDataCallbacks = new Map();
     this.topicDataRegexCallbacks = new Map();
 
-
     this.componentSubs = new Map();
     this.mapTopics2ComponentSubs = new Map();
     this.componentSubscriptionId = 0;
@@ -61,36 +60,33 @@ class ClientNodeWeb {
   /**
    * Initialize this client.
    */
-  async initialize() {
-    return new Promise((resolve, reject) => {
-      // STEP 1: open a request/reply-style service connection to server
-      this.serviceClient = new RESTClient(this.urlServices);
+  async connect(urlServices, urlTopicData) {
+    this.urlServices = urlServices ? urlServices : this.urlServices;
+    this.urlTopicData = urlTopicData ? urlTopicData : this.urlTopicData;
+    console.info(
+      'UbiiClientNode - connecting to services=' +
+        this.urlServices +
+        ' and topicdata=' +
+        this.urlTopicData +
+        ' ...'
+    );
+    // STEP 1: open a request/reply-style service connection to server
+    this.serviceClient = new ServiceConnectionHttp(this.urlServices);
 
+    try {
       // STEP 2: (service call) get the server configuration (ports, ....)
-      this.getServerConfig().then(async () => {
-        // STEP 3: (service call) register yourself as a client
-        if (!this.clientSpecification) {
-          this.registerClient()
-            .then(
-              async () => {
-                // STEP 4: open the asynchronous connection for topic data communication (needs valid client ID from registration)
-                await this.initializeTopicDataClient();
-                return resolve();
-              },
-              (error) => {
-                console.warn(error);
-              }
-            )
-            .catch((error) => {
-              console.error(error);
-              reject(error);
-              throw error;
-            });
-        } else {
-          await this.initializeTopicDataClient();
-        }
-      });
-    });
+      await this.getServerConfig();
+      // STEP 3: (service call) register yourself as a client
+      if (!this.clientSpecification) {
+        this.clientSpecification = await this.registerClient();
+      }
+      // STEP 4: open the asynchronous connection for topic data communication (needs valid client ID from registration)
+      await this.initializeTopicDataClient();
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   }
 
   async deinitialize() {
@@ -120,12 +116,12 @@ class ClientNodeWeb {
   }
 
   async reinitialize() {
-    this.serviceClient = new RESTClient(this.urlServices);
+    this.serviceClient = new ServiceConnectionHttp(this.urlServices);
     await this.initializeTopicDataClient();
   }
 
   async initializeTopicDataClient() {
-    this.topicDataClient = new WebsocketClient(this.id, this.urlTopicData);
+    this.topicDataClient = new TopicDataConnectionWebsocket(this.id, this.urlTopicData);
     this.topicDataClient.onMessageReceived((messageBuffer) => {
       try {
         let arrayBuffer = messageBuffer.data;
@@ -137,7 +133,7 @@ class ClientNodeWeb {
     });
 
     this.setPublishIntervalMs(this.publishDelayMs);
-    
+
     this.subTokenInfoNewDevices = await this.subscribeTopic('/info/device/new', (record) => {
       for (let newComponent of record.device.components) {
         let matchingSubs = this.getMatchingComponentSubscriptions(newComponent);
@@ -195,13 +191,16 @@ class ClientNodeWeb {
       };
     }
 
-    return this.callService(message).then((reply) => {
-      if (reply.client) {
-        this.clientSpecification = reply.client;
-
-        return reply.client;
-      }
-    });
+    let reply = await this.callService(message);
+    if (reply.error) {
+      console.error(LOG_TAG + 'failed client registration, response:');
+      console.error(reply.error);
+      throw new Error(reply.error);
+    } else if (reply.client) {
+      return reply.client;
+    } else {
+      throw new Error('');
+    }
   }
 
   /**
@@ -278,44 +277,18 @@ class ClientNodeWeb {
     );
   }
 
-
   /**
    * Make a service call.
    * @param {ubii.services.ServiceRequest} serviceRequest Protobuf of a service request. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceRequest.proto}
    * @returns A Ubi-Interact ServiceReply. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/services/serviceReply.proto}
    */
-  callService(message) {
-    return new Promise((resolve, reject) => {
-      // VARIANT A: PROTOBUF
-      /*let buffer = this.translatorServiceRequest.createBufferFromPayload(message);
-       this.serviceClient.send('/services', buffer).then(
-       (reply) => {
-       let buffer = new Buffer(reply);
-       let message = this.translatorServiceReply.createMessageFromBuffer(buffer);
- 
-       return resolve(message);
-       },
-       (error) => {
-       console.error(error);
-       return reject();
-       });*/
-
-      // VARIANT B: JSON
-      this.serviceClient
-        .send(message)
-        .then(
-          (reply) => {
-            return resolve(reply);
-          },
-          (rejection) => {
-            console.warn(rejection);
-            return reject(rejection);
-          }
-        )
-        .catch((error) => {
-          console.error(error);
-        });
-    });
+  async callService(serviceRequest) {
+    try {
+      let reply = await this.serviceClient.send(serviceRequest);
+      return reply;
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   /**
@@ -414,7 +387,7 @@ class ClientNodeWeb {
           }
         });
         if (replySubscribe.error) return replySubscribe.error;
-        
+
         subscription = {
           tokens: []
         };
@@ -441,7 +414,7 @@ class ClientNodeWeb {
       id: this.componentSubscriptionId,
       component: componentProfile,
       type: 'component',
-      callback: callback,
+      callback: callback
     };
     subscription.tokens.push(token);
 
@@ -540,14 +513,14 @@ class ClientNodeWeb {
    * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordList(topicDataRecordList) {
-    topicDataRecordList.forEach(record => {
+    for (let record of topicDataRecordList) {
       if (!record.topic) {
         logError('record has no topic!');
         logError(record);
       } else {
-        this.recordsToPublish.push(...topicDataRecordList);
+        this.recordsToPublish.push(record);
       }
-    });
+    }
   }
 
   flushRecordsToPublish() {
@@ -565,7 +538,7 @@ class ClientNodeWeb {
 
   /**
    * Set the interval for regular publishing of TopicDataRecords.
-   * @param {Number} intervalMs The interval in milliseconds. 
+   * @param {Number} intervalMs The interval in milliseconds.
    */
   setPublishIntervalMs(intervalMs) {
     this.intervalPublishRecords && clearInterval(this.intervalPublishRecords);

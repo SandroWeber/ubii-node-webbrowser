@@ -3,7 +3,7 @@
 const MSG_PING = 'PING';
 const MSG_PONG = 'PONG';
 
-class WebsocketClient {
+class TopicDataConnectionWebsocket {
   /**
    * Communication endpoint implementing websocket.
    * @param {string} identity ID string to uniquely identify this object. This id is used to route messages to this socket.
@@ -80,4 +80,4 @@ class WebsocketClient {
   }
 }
 
-export default WebsocketClient;
+export default TopicDataConnectionWebsocket;
