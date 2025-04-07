@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 
-class RESTClient {
+class ServiceConnectionHttp {
   /**
    * Communication endpoint implementing REST pattern.
    * @param {string} url URL to connect to.
@@ -12,6 +12,22 @@ class RESTClient {
   //TODO: make async/await !
   send(message) {
     return new Promise((resolve, reject) => {
+      // VARIANT: PROTOBUF
+      /*
+      let buffer = this.translatorServiceRequest.createBufferFromPayload(message);
+       this.serviceClient.send('/services', buffer).then(
+       (reply) => {
+       let buffer = new Buffer(reply);
+       let message = this.translatorServiceReply.createMessageFromBuffer(buffer);
+ 
+       return resolve(message);
+       },
+       (error) => {
+       console.error(error);
+       return reject();
+      });
+      */
+
       let body = JSON.stringify(message);
 
       const request = new Request(this.url, {
@@ -38,4 +54,4 @@ class RESTClient {
   }
 }
 
-export default RESTClient;
+export default ServiceConnectionHttp;
