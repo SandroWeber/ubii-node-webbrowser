@@ -5,9 +5,9 @@ import WebsocketClient from './websocketClient';
 import { ProtobufTranslator, MSG_TYPES, DEFAULT_TOPICS } from '@tum-far/ubii-msg-formats';
 import { RuntimeTopicData, SUBSCRIPTION_TYPES } from '@tum-far/ubii-topic-data';
 
-import FilterUtils from '../filterUtils';
+import FilterUtils from '../utils/filterUtils';
 
-const LOG_TAG = 'UbiiNode';
+const LOG_TAG = '[Ubii] UbiiNode';
 
 /*const logInfo = (msg) => {
   console.info(LOG_TAG + '\n' + msg);
@@ -535,6 +535,11 @@ class ClientNodeWeb {
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecord(topicDataRecord) {
+    if (!topicDataRecord.topic) {
+      logError('record has no topic!');
+      logError(topicDataRecord);
+      return;
+    }
     this.recordsToPublish.push(topicDataRecord);
   }
 
@@ -543,7 +548,7 @@ class ClientNodeWeb {
    * @param {ubii.topicData.TopicDataRecordList} topicDataRecordList TopicDataRecordList to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordList(topicDataRecordList) {
-    for (let record of topicDataRecordList) {
+    topicDataRecordList.forEach(record => {
       if (!record.topic) {
         logError('record has no topic!');
         logError(record);
@@ -580,6 +585,12 @@ class ClientNodeWeb {
    * @param {ubii.topicData.TopicDataRecord} topicDataRecord TopicDataRecord to publish. {@link https://github.com/SandroWeber/ubii-msg-formats/blob/develop/src/proto/topicData/topicDataRecord.proto}
    */
   publishRecordImmediately(topicDataRecord) {
+    if (!topicDataRecord.topic) {
+      logError('record has no topic!');
+      logError(topicDataRecord);
+      return;
+    }
+
     let buffer = this.translatorTopicData.createBufferFromPayload({
       topicDataRecord: topicDataRecord
     });
