@@ -85,26 +85,30 @@ class UbiiClientService extends EventEmitter {
       this.client = new ClientNodeWeb(this.name, this.urlServices, this.urlTopicData);
     }
 
-    return this.client.initialize().then(
-      () => {
-        if (this.client.isInitialized()) {
-          console.info(
-            'UbiiClientService - client connected with ID:\n' + this.client.clientSpecification.id
-          );
-          this.connecting = false;
+    try {
+      await this.client.initialize();
+    } catch (error) {
+      console.error('UbiiClientService.client.initialize() failed:\n' + error.toString());
+    }
+    
+    if (this.client.isInitialized()) {
+      console.info(
+        'UbiiClientService - client initialized with ID:\n' + this.client.clientSpecification.id
+      );
 
-          this.client.topicDataClient.websocket.onclose = () => {
-            console.warn('Ubi-Interact topic data websocket connection has closed!');
-            this.emit(UbiiClientService.EVENTS.DISCONNECT);
-          };
+      this.client.topicDataClient.websocket.onclose = () => {
+        console.warn('Ubi-Interact topic data websocket connection has closed!');
+        this.emit(UbiiClientService.EVENTS.DISCONNECT);
+      };
+    }
 
-          this.emit(UbiiClientService.EVENTS.CONNECT);
-        }
-      },
-      (error) => {
-        console.info('UbiiClientService.client.initialize() failed:\n' + error.toString());
-      }
-    );
+    try {
+      await this.waitForConnection();
+      this.connecting = false;
+      this.emit(UbiiClientService.EVENTS.CONNECT);
+    } catch {
+      console.error('UbiiClientService - failed to connect');
+    }
   }
 
   /**
@@ -182,7 +186,7 @@ class UbiiClientService extends EventEmitter {
    * Add a callback function to be executed after disconnecting.
    * @param {Function} callback A callback function.
    */
-  onDisconnect(callback) {
+  addOnDisconnectCallback(callback) {
     this.onDisconnectCallbacks.push(callback);
   }
 

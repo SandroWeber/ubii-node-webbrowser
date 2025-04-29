@@ -3,6 +3,8 @@
 const MSG_PING = 'PING';
 const MSG_PONG = 'PONG';
 
+const LOG_TAG = 'UBII WebSocket';
+
 class WebsocketClient {
   /**
    * Communication endpoint implementing websocket.
@@ -11,9 +13,10 @@ class WebsocketClient {
    * @param {boolean} autoconnect Should the socket connect directly after the initialization of the object?
    * If not, the start method must be called manually.
    */
-  constructor(identity, url, autoconnect = true) {
+  constructor(identity, url, autoconnect = true, cbOnDisconnect = undefined) {
     this.identity = identity;
     this.url = url;
+    this.cbOnDisconnect = cbOnDisconnect;
 
     this.textDecoder = new TextDecoder("utf-8");
 
@@ -38,6 +41,10 @@ class WebsocketClient {
     this.websocket.binaryType = 'arraybuffer';
 
     // add callbacks
+    this.websocket.onopen = (event) => {
+      this.ready = true;
+    };
+
     this.websocket.onmessage = (message) => {
       // process pings
       if (message.data === MSG_PING) {
@@ -60,6 +67,14 @@ class WebsocketClient {
 
     this.websocket.onerror = error => {
       throw error;
+    };
+
+    this.websocket.onclose = (event) => {
+      if (!event.wasClean) {
+        console.warn(LOG_TAG + ' - closed unexpectedly!');
+      }
+      this.ready = false;
+      this.cbOnDisconnect && this.cbOnDisconnect(event);
     };
   }
 
